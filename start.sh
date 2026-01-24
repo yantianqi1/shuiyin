@@ -13,6 +13,12 @@ if ! dpkg -l | grep -q python3-venv; then
     apt update && apt install -y python3-venv python3-pip
 fi
 
+# OpenCV 系统依赖
+if ! dpkg -l | grep -q libgl1; then
+    echo "安装 OpenCV 依赖..."
+    apt install -y libgl1 libglib2.0-0
+fi
+
 echo "=== 设置虚拟环境 ==="
 # 如果venv损坏则删除重建
 if [ -d "venv" ] && [ ! -f "venv/bin/activate" ]; then
