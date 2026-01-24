@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片去水印工具</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>图片去水印工具</h1>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="imageInput" accept="image/*" hidden>
+                <div class="upload-prompt">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17,8 12,3 7,8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>点击或拖拽图片到这里上传</p>
+                    <span>支持 JPG、PNG、WebP 格式</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section" id="previewSection" style="display: none;">
+            <div class="image-container">
+                <div class="image-box">
+                    <h3>原图</h3>
+                    <div class="image-wrapper">
+                        <img id="originalImage" alt="原图">
+                        <canvas id="maskCanvas" style="display: none;"></canvas>
+                    </div>
+                </div>
+                <div class="image-box">
+                    <h3>处理结果</h3>
+                    <div class="image-wrapper">
+                        <img id="resultImage" alt="结果">
+                        <div class="placeholder" id="resultPlaceholder">
+                            等待处理...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="method-select">
+                    <label>去水印方式：</label>
+                    <select id="methodSelect">
+                        <option value="auto">自动检测（浅色水印）</option>
+                        <option value="region">手动选择区域</option>
+                        <option value="color">按颜色去除</option>
+                        <option value="frequency">频域滤波（平铺水印）</option>
+                    </select>
+                </div>
+
+                <div class="method-options" id="autoOptions">
+                    <label>亮度阈值：<span id="thresholdValue">200</span></label>
+                    <input type="range" id="threshold" min="100" max="255" value="200">
+                </div>
+
+                <div class="method-options" id="regionOptions" style="display: none;">
+                    <p>在左侧图片上拖拽选择水印区域</p>
+                    <div class="region-inputs">
+                        <label>X: <input type="number" id="regionX" value="0"></label>
+                        <label>Y: <input type="number" id="regionY" value="0"></label>
+                        <label>宽度: <input type="number" id="regionW" value="100"></label>
+                        <label>高度: <input type="number" id="regionH" value="50"></label>
+                    </div>
+                </div>
+
+                <div class="method-options" id="colorOptions" style="display: none;">
+                    <p>选择要去除的水印颜色范围</p>
+                    <div class="color-inputs">
+                        <label>颜色下限：<input type="color" id="colorLower" value="#c8c8c8"></label>
+                        <label>颜色上限：<input type="color" id="colorUpper" value="#ffffff"></label>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="processBtn" class="btn primary">开始处理</button>
+                    <button id="downloadBtn" class="btn" disabled>下载结果</button>
+                    <button id="resetBtn" class="btn">重新上传</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>正在处理中...</p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
