@@ -30,61 +30,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const regionH = document.getElementById('regionH');
 
     // ============================================
-    // 像素风格音效和动画效果
+    // 简化的动画效果
     // ============================================
 
-    // 创建像素风格的点击反馈
-    function createPixelBurst(x, y, color = '#5D9B47') {
-        const burst = document.createElement('div');
-        burst.className = 'pixel-burst';
-        burst.style.cssText = `
+    // 创建简单的点击反馈
+    function createClickEffect(x, y, color = '#4FC3F7') {
+        const effect = document.createElement('div');
+        effect.style.cssText = `
             position: fixed;
-            left: ${x}px;
-            top: ${y}px;
-            width: 8px;
-            height: 8px;
+            left: ${x - 10}px;
+            top: ${y - 10}px;
+            width: 20px;
+            height: 20px;
             background: ${color};
+            border-radius: 50%;
             pointer-events: none;
             z-index: 9999;
-            animation: pixelBurstAnim 0.4s steps(4) forwards;
+            opacity: 0.6;
+            animation: clickRipple 0.4s ease-out forwards;
         `;
-        document.body.appendChild(burst);
-
-        // 创建多个小方块
-        for (let i = 0; i < 6; i++) {
-            const particle = document.createElement('div');
-            const angle = (i / 6) * Math.PI * 2;
-            const distance = 20 + Math.random() * 20;
-            particle.style.cssText = `
-                position: fixed;
-                left: ${x}px;
-                top: ${y}px;
-                width: 4px;
-                height: 4px;
-                background: ${color};
-                pointer-events: none;
-                z-index: 9999;
-                animation: particleFly 0.5s steps(5) forwards;
-                --tx: ${Math.cos(angle) * distance}px;
-                --ty: ${Math.sin(angle) * distance}px;
-            `;
-            document.body.appendChild(particle);
-            setTimeout(() => particle.remove(), 500);
-        }
-
-        setTimeout(() => burst.remove(), 400);
+        document.body.appendChild(effect);
+        setTimeout(() => effect.remove(), 400);
     }
 
     // 添加动态CSS动画
     const styleSheet = document.createElement('style');
     styleSheet.textContent = `
-        @keyframes pixelBurstAnim {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(3); opacity: 0; }
-        }
-        @keyframes particleFly {
-            0% { transform: translate(0, 0); opacity: 1; }
-            100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+        @keyframes clickRipple {
+            0% { transform: scale(0.5); opacity: 0.6; }
+            100% { transform: scale(2); opacity: 0; }
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -92,9 +66,9 @@ document.addEventListener('DOMContentLoaded', function() {
             75% { transform: translateX(4px); }
         }
         @keyframes successPulse {
-            0% { box-shadow: 0 0 0 0 rgba(74, 237, 217, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(74, 237, 217, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(74, 237, 217, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(105, 240, 174, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(105, 240, 174, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(105, 240, 174, 0); }
         }
     `;
     document.head.appendChild(styleSheet);
@@ -103,11 +77,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function addButtonClickEffect(btn) {
         btn.addEventListener('click', () => {
             const rect = btn.getBoundingClientRect();
-            createPixelBurst(
+            const color = btn.classList.contains('primary') ? '#69F0AE' :
+                btn.classList.contains('download') ? '#4FC3F7' : '#E0E0E0';
+            createClickEffect(
                 rect.left + rect.width / 2,
                 rect.top + rect.height / 2,
-                btn.classList.contains('primary') ? '#5D9B47' :
-                btn.classList.contains('download') ? '#4AEDD9' : '#7F7F7F'
+                color
             );
         });
     }
@@ -121,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 点击上传区域
     uploadArea.addEventListener('click', (e) => {
-        createPixelBurst(e.clientX, e.clientY, '#9C7A4A');
+        createClickEffect(e.clientX, e.clientY, '#4FC3F7');
         imageInput.click();
     });
 
@@ -140,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadArea.classList.remove('dragover');
         const files = e.dataTransfer.files;
         if (files.length > 0 && files[0].type.startsWith('image/')) {
-            createPixelBurst(e.clientX, e.clientY, '#4AEDD9');
+            createClickEffect(e.clientX, e.clientY, '#69F0AE');
             handleFile(files[0]);
         }
     });
@@ -394,17 +369,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultBox.style.animation = '';
             }, 600);
 
-            // 在结果图片上创建粒子效果
+            // 在结果图片上创建效果
             const imgRect = resultImage.getBoundingClientRect();
-            for (let i = 0; i < 8; i++) {
-                setTimeout(() => {
-                    createPixelBurst(
-                        imgRect.left + Math.random() * imgRect.width,
-                        imgRect.top + Math.random() * imgRect.height,
-                        ['#4AEDD9', '#17DD62', '#FCEE4B'][Math.floor(Math.random() * 3)]
-                    );
-                }, i * 100);
-            }
+            createClickEffect(
+                imgRect.left + imgRect.width / 2,
+                imgRect.top + imgRect.height / 2,
+                '#69F0AE'
+            );
 
         } catch (error) {
             // 错误抖动效果
@@ -516,17 +487,13 @@ document.addEventListener('DOMContentLoaded', function() {
     downloadBtn.addEventListener('click', () => {
         if (!resultBlob) return;
 
-        // 创建下载粒子效果
+        // 创建下载效果
         const rect = downloadBtn.getBoundingClientRect();
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-                createPixelBurst(
-                    rect.left + rect.width / 2 + (Math.random() - 0.5) * 40,
-                    rect.top + rect.height / 2,
-                    '#4AEDD9'
-                );
-            }, i * 50);
-        }
+        createClickEffect(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+            '#4FC3F7'
+        );
 
         const url = URL.createObjectURL(resultBlob);
         const a = document.createElement('a');
@@ -567,62 +534,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
 
-    // ============================================
-    // 额外的视觉效果
-    // ============================================
-
-    // 鼠标移动时的像素跟踪效果（轻量级）
-    let lastTrailTime = 0;
-    document.addEventListener('mousemove', (e) => {
-        const now = Date.now();
-        if (now - lastTrailTime < 100) return; // 限制频率
-        lastTrailTime = now;
-
-        // 只在容器内显示效果
-        const container = document.querySelector('.container');
-        const rect = container.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom) {
-
-            const trail = document.createElement('div');
-            trail.style.cssText = `
-                position: fixed;
-                left: ${e.clientX}px;
-                top: ${e.clientY}px;
-                width: 4px;
-                height: 4px;
-                background: rgba(74, 237, 217, 0.3);
-                pointer-events: none;
-                z-index: 9998;
-                animation: trailFade 0.5s ease forwards;
-            `;
-            document.body.appendChild(trail);
-            setTimeout(() => trail.remove(), 500);
-        }
-    });
-
-    // 添加轨迹动画
-    const trailStyle = document.createElement('style');
-    trailStyle.textContent = `
-        @keyframes trailFade {
-            0% { opacity: 1; transform: scale(1); }
-            100% { opacity: 0; transform: scale(0.5); }
-        }
-    `;
-    document.head.appendChild(trailStyle);
-
-    // 初始化欢迎粒子效果
-    setTimeout(() => {
-        const container = document.querySelector('.container');
-        const rect = container.getBoundingClientRect();
-        for (let i = 0; i < 10; i++) {
-            setTimeout(() => {
-                createPixelBurst(
-                    rect.left + Math.random() * rect.width,
-                    rect.top + Math.random() * rect.height / 3,
-                    ['#5D9B47', '#4AEDD9', '#FCEE4B', '#17DD62'][Math.floor(Math.random() * 4)]
-                );
-            }, i * 100);
-        }
-    }, 500);
 });
