@@ -14,6 +14,12 @@ if ! dpkg -l | grep -q python3-venv; then
 fi
 
 echo "=== 设置虚拟环境 ==="
+# 如果venv损坏则删除重建
+if [ -d "venv" ] && [ ! -f "venv/bin/activate" ]; then
+    echo "虚拟环境损坏，重新创建..."
+    rm -rf venv
+fi
+
 if [ ! -d "venv" ]; then
     echo "创建虚拟环境..."
     python3 -m venv venv
