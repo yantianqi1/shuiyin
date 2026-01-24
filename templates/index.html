@@ -3,24 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片去水印工具</title>
+    <title>像素去水印工具 - Pixel Watermark Remover</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect fill='%235D9B47' width='16' height='16'/><rect fill='%234A7C38' x='0' y='8' width='16' height='8'/><rect fill='%23FCEE4B' x='6' y='4' width='4' height='4'/></svg>">
 </head>
 <body>
+    <!-- 像素装饰粒子 -->
+    <div class="pixel-particles" aria-hidden="true">
+        <div class="particle particle-1"></div>
+        <div class="particle particle-2"></div>
+        <div class="particle particle-3"></div>
+        <div class="particle particle-4"></div>
+        <div class="particle particle-5"></div>
+    </div>
+
     <div class="container">
-        <h1>图片去水印工具</h1>
+        <!-- 角落装饰 -->
+        <div class="corner-decoration top-left"></div>
+        <div class="corner-decoration top-right"></div>
+        <div class="corner-decoration bottom-left"></div>
+        <div class="corner-decoration bottom-right"></div>
+
+        <h1>
+            <span class="title-icon">⛏️</span>
+            像素去水印工具
+            <span class="title-icon">🎨</span>
+        </h1>
+
+        <!-- 版本信息栏 -->
+        <div class="version-bar">
+            <span class="version-tag">v2.0</span>
+            <span class="version-text">Minecraft Style Edition</span>
+            <div class="heart-container">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
+        </div>
 
         <div class="upload-section">
             <div class="upload-area" id="uploadArea">
                 <input type="file" id="imageInput" accept="image/*" hidden>
                 <div class="upload-prompt">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17,8 12,3 7,8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    <p>点击或拖拽图片到这里上传</p>
-                    <span>支持 JPG、PNG、WebP 格式</span>
+                    <!-- 像素风格上传图标 -->
+                    <div class="pixel-icon upload-icon">
+                        <div class="chest-top"></div>
+                        <div class="chest-body">
+                            <div class="chest-lock"></div>
+                        </div>
+                    </div>
+                    <p>点击打开宝箱上传图片</p>
+                    <span>或拖拽图片到这里</span>
+                    <div class="format-tags">
+                        <span class="format-tag">JPG</span>
+                        <span class="format-tag">PNG</span>
+                        <span class="format-tag">WebP</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -28,69 +66,147 @@
         <div class="preview-section" id="previewSection" style="display: none;">
             <div class="image-container">
                 <div class="image-box">
-                    <h3>原图</h3>
+                    <h3>
+                        <span class="box-icon">📜</span>
+                        原图
+                    </h3>
                     <div class="image-wrapper">
                         <img id="originalImage" alt="原图">
                         <canvas id="maskCanvas" style="display: none;"></canvas>
                     </div>
                 </div>
-                <div class="image-box">
-                    <h3>处理结果</h3>
+                <div class="image-box result-box">
+                    <h3>
+                        <span class="box-icon">✨</span>
+                        处理结果
+                    </h3>
                     <div class="image-wrapper">
                         <img id="resultImage" alt="结果">
                         <div class="placeholder" id="resultPlaceholder">
-                            等待处理...
+                            <span class="placeholder-icon">⏳</span>
+                            <span>等待魔法...</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="controls">
+                <div class="controls-header">
+                    <span class="controls-icon">🔧</span>
+                    <span class="controls-title">工作台</span>
+                </div>
+
                 <div class="method-select">
-                    <label>去水印方式：</label>
+                    <label>
+                        <span class="label-icon">⚡</span>
+                        去水印方式：
+                    </label>
                     <select id="methodSelect">
-                        <option value="auto">自动检测（浅色水印）</option>
-                        <option value="region">手动选择区域</option>
-                        <option value="color">按颜色去除</option>
-                        <option value="frequency">频域滤波（平铺水印）</option>
+                        <option value="auto">🔮 自动检测（浅色水印）</option>
+                        <option value="region">✋ 手动选择区域</option>
+                        <option value="color">🎨 按颜色去除</option>
+                        <option value="frequency">🌊 频域滤波（平铺水印）</option>
                     </select>
                 </div>
 
                 <div class="method-options" id="autoOptions">
-                    <label>亮度阈值：<span id="thresholdValue">200</span></label>
+                    <div class="option-header">
+                        <span class="option-icon">💡</span>
+                        亮度阈值调节
+                    </div>
+                    <label>
+                        当前值：<span id="thresholdValue" class="value-display">200</span>
+                    </label>
                     <input type="range" id="threshold" min="100" max="255" value="200">
+                    <div class="slider-labels">
+                        <span>深色</span>
+                        <span>浅色</span>
+                    </div>
                 </div>
 
                 <div class="method-options" id="regionOptions" style="display: none;">
+                    <div class="option-header">
+                        <span class="option-icon">📐</span>
+                        区域选择
+                    </div>
                     <p>在左侧图片上拖拽选择水印区域</p>
                     <div class="region-inputs">
-                        <label>X: <input type="number" id="regionX" value="0"></label>
-                        <label>Y: <input type="number" id="regionY" value="0"></label>
-                        <label>宽度: <input type="number" id="regionW" value="100"></label>
-                        <label>高度: <input type="number" id="regionH" value="50"></label>
+                        <label>
+                            <span class="coord-label">X</span>
+                            <input type="number" id="regionX" value="0">
+                        </label>
+                        <label>
+                            <span class="coord-label">Y</span>
+                            <input type="number" id="regionY" value="0">
+                        </label>
+                        <label>
+                            <span class="coord-label">W</span>
+                            <input type="number" id="regionW" value="100">
+                        </label>
+                        <label>
+                            <span class="coord-label">H</span>
+                            <input type="number" id="regionH" value="50">
+                        </label>
                     </div>
                 </div>
 
                 <div class="method-options" id="colorOptions" style="display: none;">
+                    <div class="option-header">
+                        <span class="option-icon">🎯</span>
+                        颜色范围
+                    </div>
                     <p>选择要去除的水印颜色范围</p>
                     <div class="color-inputs">
-                        <label>颜色下限：<input type="color" id="colorLower" value="#c8c8c8"></label>
-                        <label>颜色上限：<input type="color" id="colorUpper" value="#ffffff"></label>
+                        <label>
+                            <span class="color-label">下限</span>
+                            <input type="color" id="colorLower" value="#c8c8c8">
+                        </label>
+                        <label>
+                            <span class="color-label">上限</span>
+                            <input type="color" id="colorUpper" value="#ffffff">
+                        </label>
                     </div>
                 </div>
 
                 <div class="action-buttons">
-                    <button id="processBtn" class="btn primary">开始处理</button>
-                    <button id="downloadBtn" class="btn" disabled>下载结果</button>
-                    <button id="resetBtn" class="btn">重新上传</button>
+                    <button id="processBtn" class="btn primary">
+                        <span class="btn-icon">⚔️</span>
+                        开始处理
+                    </button>
+                    <button id="downloadBtn" class="btn download" disabled>
+                        <span class="btn-icon">📥</span>
+                        下载结果
+                    </button>
+                    <button id="resetBtn" class="btn reset">
+                        <span class="btn-icon">🔄</span>
+                        重新上传
+                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- 加载遮罩 -->
         <div class="loading" id="loading" style="display: none;">
-            <div class="spinner"></div>
-            <p>正在处理中...</p>
+            <div class="loading-content">
+                <div class="spinner">
+                    <div class="spinner-cube"></div>
+                </div>
+                <p class="loading-text">施展魔法中...</p>
+                <div class="loading-dots">
+                    <span>.</span><span>.</span><span>.</span>
+                </div>
+            </div>
         </div>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <span class="footer-icon">🏠</span>
+                <span>像素工坊出品</span>
+                <span class="footer-separator">|</span>
+                <span>Crafted with ❤️</span>
+            </div>
+        </footer>
     </div>
 
     <script src="/static/app.js"></script>
