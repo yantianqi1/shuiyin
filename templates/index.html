@@ -3,29 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的水印 - My Watermark</title>
+    <title>我的水印 - 智能去水印工具</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect fill='%235D9B47' width='16' height='16'/><rect fill='%234A7C38' x='0' y='8' width='16' height='8'/><rect fill='%23FCEE4B' x='6' y='4' width='4' height='4'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230D9488'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/></svg>">
 </head>
 <body>
     <div class="container">
-
         <h1>
-            <span class="title-icon">💧</span>
+            <span class="title-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                </svg>
+            </span>
             我的水印
-            <span class="title-icon">✨</span>
+            <span class="title-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+            </span>
         </h1>
 
         <!-- 副标题 -->
         <div class="subtitle-bar">
-            <span class="subtitle-text">一键去除图片水印</span>
+            <span class="subtitle-text">智能去除图片水印 · 简单高效</span>
         </div>
 
         <div class="upload-section">
             <div class="upload-area" id="uploadArea">
                 <input type="file" id="imageInput" accept="image/*" hidden>
                 <div class="upload-prompt">
-                    <div class="upload-icon-wrapper">📤</div>
+                    <div class="upload-icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
                     <p>点击或拖拽上传图片</p>
                     <span>支持 JPG、PNG、WebP 格式</span>
                 </div>
@@ -36,7 +49,11 @@
             <div class="image-container">
                 <div class="image-box">
                     <h3>
-                        <span class="box-icon">📜</span>
+                        <svg class="box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
                         原图
                     </h3>
                     <div class="image-wrapper">
@@ -46,14 +63,19 @@
                 </div>
                 <div class="image-box result-box">
                     <h3>
-                        <span class="box-icon">✨</span>
+                        <svg class="box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
                         处理结果
                     </h3>
                     <div class="image-wrapper">
                         <img id="resultImage" alt="结果">
                         <div class="placeholder" id="resultPlaceholder">
-                            <span class="placeholder-icon">⏳</span>
-                            <span>等待魔法...</span>
+                            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span>等待处理...</span>
                         </div>
                     </div>
                 </div>
@@ -61,26 +83,41 @@
 
             <div class="controls">
                 <div class="controls-header">
-                    <span class="controls-icon">🔧</span>
-                    <span class="controls-title">工作台</span>
+                    <svg class="controls-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="controls-title">处理设置</span>
                 </div>
 
                 <div class="method-select">
                     <label>
-                        <span class="label-icon">⚡</span>
-                        去水印方式：
+                        <svg class="label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                        </svg>
+                        去水印方式
                     </label>
                     <select id="methodSelect">
-                        <option value="auto">🔮 自动检测（浅色水印）</option>
-                        <option value="region">✋ 手动选择区域</option>
-                        <option value="color">🎨 按颜色去除</option>
-                        <option value="frequency">🌊 频域滤波（平铺水印）</option>
+                        <option value="auto">自动检测（浅色水印）</option>
+                        <option value="region">手动选择区域</option>
+                        <option value="color">按颜色去除</option>
+                        <option value="frequency">频域滤波（平铺水印）</option>
                     </select>
                 </div>
 
                 <div class="method-options" id="autoOptions">
                     <div class="option-header">
-                        <span class="option-icon">💡</span>
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
                         亮度阈值调节
                     </div>
                     <label>
@@ -95,7 +132,9 @@
 
                 <div class="method-options" id="regionOptions" style="display: none;">
                     <div class="option-header">
-                        <span class="option-icon">📐</span>
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 3H3v18h18V3zM9 3v18M15 3v18M3 9h18M3 15h18"/>
+                        </svg>
                         区域选择
                     </div>
                     <p>在左侧图片上拖拽选择水印区域</p>
@@ -121,7 +160,13 @@
 
                 <div class="method-options" id="colorOptions" style="display: none;">
                     <div class="option-header">
-                        <span class="option-icon">🎯</span>
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="13.5" cy="6.5" r="2.5"/>
+                            <circle cx="17.5" cy="10.5" r="2.5"/>
+                            <circle cx="8.5" cy="7.5" r="2.5"/>
+                            <circle cx="6.5" cy="12.5" r="2.5"/>
+                            <path d="M12 22a10 10 0 1 0-3.18-19.48c-.2.5-.82.77-1.23.43"/>
+                        </svg>
                         颜色范围
                     </div>
                     <p>选择要去除的水印颜色范围</p>
@@ -139,15 +184,24 @@
 
                 <div class="action-buttons">
                     <button id="processBtn" class="btn primary">
-                        <span class="btn-icon">⚔️</span>
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
                         开始处理
                     </button>
                     <button id="downloadBtn" class="btn download" disabled>
-                        <span class="btn-icon">📥</span>
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
                         下载结果
                     </button>
                     <button id="resetBtn" class="btn reset">
-                        <span class="btn-icon">🔄</span>
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
                         重新上传
                     </button>
                 </div>
@@ -160,9 +214,9 @@
                 <div class="spinner">
                     <div class="spinner-cube"></div>
                 </div>
-                <p class="loading-text">施展魔法中...</p>
+                <p class="loading-text">正在处理中...</p>
                 <div class="loading-dots">
-                    <span>.</span><span>.</span><span>.</span>
+                    <span></span><span></span><span></span>
                 </div>
             </div>
         </div>
@@ -170,7 +224,7 @@
         <!-- 页脚 -->
         <footer class="footer">
             <div class="footer-content">
-                <span>我的水印 © 2025</span>
+                <span>我的水印 © 2025 · 智能图片处理工具</span>
             </div>
         </footer>
     </div>
