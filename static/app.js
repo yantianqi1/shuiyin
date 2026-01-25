@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // ============================================
+    // 元素引用
+    // ============================================
     const uploadArea = document.getElementById('uploadArea');
     const imageInput = document.getElementById('imageInput');
     const previewSection = document.getElementById('previewSection');
@@ -10,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('downloadBtn');
     const resetBtn = document.getElementById('resetBtn');
     const loading = document.getElementById('loading');
+    const loadingText = document.getElementById('loadingText');
     const threshold = document.getElementById('threshold');
     const thresholdValue = document.getElementById('thresholdValue');
 
@@ -20,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const watermarkOptions = document.getElementById('watermarkOptions');
 
     // 水印相关元素
-    const watermarkTabs = document.querySelectorAll('.watermark-tab');
+    const watermarkTabs = document.querySelectorAll('#watermarkOptions .watermark-tab');
     const textWatermarkPanel = document.getElementById('textWatermarkPanel');
     const imageWatermarkPanel = document.getElementById('imageWatermarkPanel');
     const watermarkUploadArea = document.getElementById('watermarkUploadArea');
@@ -45,10 +49,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const customX = document.getElementById('customX');
     const customY = document.getElementById('customY');
 
+    // 输出设置
+    const outputFormat = document.getElementById('outputFormat');
+    const outputQuality = document.getElementById('outputQuality');
+    const qualityValue = document.getElementById('qualityValue');
+
+    // 主题切换
+    const themeToggle = document.getElementById('themeToggle');
+
+    // 模式切换
+    const modeTabs = document.querySelectorAll('.mode-tab');
+    const singleUploadSection = document.getElementById('singleUploadSection');
+    const batchUploadSection = document.getElementById('batchUploadSection');
+    const batchControls = document.getElementById('batchControls');
+
+    // 批量处理元素
+    const batchUploadArea = document.getElementById('batchUploadArea');
+    const batchImageInput = document.getElementById('batchImageInput');
+    const batchPreviewList = document.getElementById('batchPreviewList');
+    const batchThumbnails = document.getElementById('batchThumbnails');
+    const batchFileCount = document.getElementById('batchFileCount');
+    const batchClearBtn = document.getElementById('batchClearBtn');
+    const batchProcessBtn = document.getElementById('batchProcessBtn');
+    const batchResetBtn = document.getElementById('batchResetBtn');
+    const batchMethodSelect = document.getElementById('batchMethodSelect');
+    const batchOutputFormat = document.getElementById('batchOutputFormat');
+    const batchOutputQuality = document.getElementById('batchOutputQuality');
+    const batchQualityValue = document.getElementById('batchQualityValue');
+
+    // 模板相关
+    const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+    const templateList = document.getElementById('templateList');
+
     let currentFile = null;
     let resultBlob = null;
     let watermarkFile = null;
     let currentWatermarkType = 'text';
+    let currentMode = 'single';
+    let batchFiles = [];
+    let batchWatermarkFile = null;
+    let batchWatermarkType = 'text';
 
     // 区域选择相关
     let isDrawing = false;
@@ -59,15 +99,70 @@ document.addEventListener('DOMContentLoaded', function() {
     const regionH = document.getElementById('regionH');
 
     // ============================================
-    // 上传功能
+    // 主题切换功能
     // ============================================
 
-    // 点击上传区域
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        } else if (prefersDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    }
+
+    initTheme();
+    themeToggle.addEventListener('click', toggleTheme);
+
+    // 监听系统主题变化
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+            document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+        }
+    });
+
+    // ============================================
+    // 模式切换功能
+    // ============================================
+
+    modeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            modeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentMode = tab.dataset.mode;
+
+            if (currentMode === 'single') {
+                singleUploadSection.style.display = 'block';
+                batchUploadSection.style.display = 'none';
+                batchControls.style.display = 'none';
+            } else {
+                singleUploadSection.style.display = 'none';
+                batchUploadSection.style.display = 'block';
+                previewSection.style.display = 'none';
+                if (batchFiles.length > 0) {
+                    batchControls.style.display = 'block';
+                }
+            }
+        });
+    });
+
+    // ============================================
+    // 单图上传功能
+    // ============================================
+
     uploadArea.addEventListener('click', () => {
         imageInput.click();
     });
 
-    // 拖拽上传
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadArea.classList.add('dragover');
@@ -86,7 +181,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 文件选择
     imageInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFile(e.target.files[0]);
@@ -102,7 +196,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setupRegionSelection();
             };
 
-            // 平滑过渡动画
             uploadArea.parentElement.style.opacity = '0';
             uploadArea.parentElement.style.transform = 'translateY(-10px)';
             uploadArea.parentElement.style.transition = 'all 0.3s ease';
@@ -128,7 +221,98 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.readAsDataURL(file);
     }
 
-    // 设置区域选择功能
+    // ============================================
+    // 批量上传功能
+    // ============================================
+
+    batchUploadArea.addEventListener('click', () => {
+        batchImageInput.click();
+    });
+
+    batchUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        batchUploadArea.classList.add('dragover');
+    });
+
+    batchUploadArea.addEventListener('dragleave', () => {
+        batchUploadArea.classList.remove('dragover');
+    });
+
+    batchUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        batchUploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) {
+            addBatchFiles(files);
+        }
+    });
+
+    batchImageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            addBatchFiles(Array.from(e.target.files));
+        }
+    });
+
+    function addBatchFiles(files) {
+        batchFiles = batchFiles.concat(files);
+        updateBatchPreview();
+        batchControls.style.display = 'block';
+    }
+
+    function updateBatchPreview() {
+        batchFileCount.textContent = batchFiles.length;
+        batchThumbnails.innerHTML = '';
+
+        if (batchFiles.length > 0) {
+            batchPreviewList.style.display = 'block';
+
+            batchFiles.forEach((file, index) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'batch-thumbnail';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'batch-thumbnail-remove';
+                removeBtn.innerHTML = '×';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    batchFiles.splice(index, 1);
+                    updateBatchPreview();
+                    if (batchFiles.length === 0) {
+                        batchControls.style.display = 'none';
+                    }
+                };
+
+                thumb.appendChild(img);
+                thumb.appendChild(removeBtn);
+                batchThumbnails.appendChild(thumb);
+            });
+        } else {
+            batchPreviewList.style.display = 'none';
+        }
+    }
+
+    batchClearBtn.addEventListener('click', () => {
+        batchFiles = [];
+        updateBatchPreview();
+        batchControls.style.display = 'none';
+        batchImageInput.value = '';
+    });
+
+    batchResetBtn.addEventListener('click', () => {
+        batchFiles = [];
+        updateBatchPreview();
+        batchControls.style.display = 'none';
+        batchImageInput.value = '';
+    });
+
+    // ============================================
+    // 区域选择功能
+    // ============================================
+
     function setupRegionSelection() {
         const wrapper = originalImage.parentElement;
         let canvas = document.getElementById('maskCanvas');
@@ -177,7 +361,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 绘制选择框
             ctx.strokeStyle = '#0D9488';
             ctx.lineWidth = 3;
             ctx.setLineDash([8, 4]);
@@ -188,12 +371,10 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.fillRect(startX, startY, width, height);
             ctx.strokeRect(startX, startY, width, height);
 
-            // 绘制角标记
             ctx.setLineDash([]);
             ctx.fillStyle = '#0D9488';
             const cornerSize = 10;
 
-            // 四个角
             ctx.fillRect(startX - 2, startY - 2, cornerSize, 3);
             ctx.fillRect(startX - 2, startY - 2, 3, cornerSize);
 
@@ -206,7 +387,6 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.fillRect(startX + width - cornerSize + 2, startY + height - 1, cornerSize, 3);
             ctx.fillRect(startX + width - 1, startY + height - cornerSize + 2, 3, cornerSize);
 
-            // 更新输入框
             regionX.value = Math.round(Math.min(startX, currentX));
             regionY.value = Math.round(Math.min(startY, currentY));
             regionW.value = Math.round(Math.abs(width));
@@ -222,15 +402,16 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // 方式选择切换
+    // ============================================
+    // 方法选择切换
+    // ============================================
+
     methodSelect.addEventListener('change', () => {
-        // 隐藏所有选项
         autoOptions.style.display = 'none';
         regionOptions.style.display = 'none';
         colorOptions.style.display = 'none';
         watermarkOptions.style.display = 'none';
 
-        // 显示对应选项
         switch (methodSelect.value) {
             case 'auto':
                 autoOptions.style.display = 'block';
@@ -249,7 +430,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setupRegionSelection();
     });
 
-    // 阈值滑块
     threshold.addEventListener('input', () => {
         thresholdValue.textContent = threshold.value;
     });
@@ -258,7 +438,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 水印功能相关事件
     // ============================================
 
-    // 水印类型标签页切换
     watermarkTabs.forEach(tab => {
         tab.addEventListener('click', () => {
             watermarkTabs.forEach(t => t.classList.remove('active'));
@@ -275,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 水印图片上传
     watermarkUploadArea.addEventListener('click', () => {
         watermarkImageInput.click();
     });
@@ -293,7 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 水印位置选择
     watermarkPosition.addEventListener('change', () => {
         if (watermarkPosition.value === 'custom') {
             customCoords.style.display = 'flex';
@@ -302,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 水印参数滑块实时更新
     fontSize.addEventListener('input', () => {
         fontSizeValue.textContent = fontSize.value;
     });
@@ -323,16 +499,131 @@ document.addEventListener('DOMContentLoaded', function() {
         marginValue.textContent = watermarkMargin.value + 'px';
     });
 
-    // 处理按钮
+    // 输出质量滑块
+    outputQuality.addEventListener('input', () => {
+        qualityValue.textContent = outputQuality.value + '%';
+    });
+
+    // ============================================
+    // 水印模板功能
+    // ============================================
+
+    function getWatermarkSettings() {
+        return {
+            type: currentWatermarkType,
+            text: watermarkText.value,
+            fontSize: fontSize.value,
+            fontColor: fontColor.value,
+            rotation: rotation.value,
+            scale: watermarkScale.value,
+            opacity: watermarkOpacity.value,
+            margin: watermarkMargin.value,
+            position: watermarkPosition.value
+        };
+    }
+
+    function applyWatermarkSettings(settings) {
+        if (settings.type === 'text') {
+            watermarkTabs.forEach(t => t.classList.remove('active'));
+            document.querySelector('.watermark-tab[data-type="text"]').classList.add('active');
+            textWatermarkPanel.style.display = 'block';
+            imageWatermarkPanel.style.display = 'none';
+            currentWatermarkType = 'text';
+        } else {
+            watermarkTabs.forEach(t => t.classList.remove('active'));
+            document.querySelector('.watermark-tab[data-type="image"]').classList.add('active');
+            textWatermarkPanel.style.display = 'none';
+            imageWatermarkPanel.style.display = 'block';
+            currentWatermarkType = 'image';
+        }
+
+        watermarkText.value = settings.text || '我的水印';
+        fontSize.value = settings.fontSize || 36;
+        fontSizeValue.textContent = fontSize.value;
+        fontColor.value = settings.fontColor || '#ffffff';
+        rotation.value = settings.rotation || 0;
+        rotationValue.textContent = rotation.value + '°';
+        watermarkScale.value = settings.scale || 20;
+        scaleValue.textContent = watermarkScale.value + '%';
+        watermarkOpacity.value = settings.opacity || 50;
+        opacityValue.textContent = watermarkOpacity.value + '%';
+        watermarkMargin.value = settings.margin || 20;
+        marginValue.textContent = watermarkMargin.value + 'px';
+        watermarkPosition.value = settings.position || 'bottom-right';
+
+        if (settings.position === 'custom') {
+            customCoords.style.display = 'flex';
+        } else {
+            customCoords.style.display = 'none';
+        }
+    }
+
+    function loadTemplates() {
+        const templates = JSON.parse(localStorage.getItem('watermarkTemplates') || '[]');
+        templateList.innerHTML = '';
+
+        if (templates.length === 0) {
+            templateList.innerHTML = '<span class="template-empty">暂无保存的模板</span>';
+            return;
+        }
+
+        templates.forEach((template, index) => {
+            const item = document.createElement('div');
+            item.className = 'template-item';
+            item.innerHTML = `
+                <span class="template-item-name">${template.name}</span>
+                <button type="button" class="template-item-delete" data-index="${index}">×</button>
+            `;
+
+            item.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('template-item-delete')) {
+                    applyWatermarkSettings(template.settings);
+                    showAlert('已应用模板：' + template.name);
+                }
+            });
+
+            item.querySelector('.template-item-delete').addEventListener('click', (e) => {
+                e.stopPropagation();
+                templates.splice(index, 1);
+                localStorage.setItem('watermarkTemplates', JSON.stringify(templates));
+                loadTemplates();
+            });
+
+            templateList.appendChild(item);
+        });
+    }
+
+    saveTemplateBtn.addEventListener('click', () => {
+        const name = prompt('请输入模板名称：');
+        if (!name) return;
+
+        const templates = JSON.parse(localStorage.getItem('watermarkTemplates') || '[]');
+        templates.push({
+            name: name,
+            settings: getWatermarkSettings()
+        });
+        localStorage.setItem('watermarkTemplates', JSON.stringify(templates));
+        loadTemplates();
+        showAlert('模板已保存：' + name);
+    });
+
+    loadTemplates();
+
+    // ============================================
+    // 单图处理按钮
+    // ============================================
+
     processBtn.addEventListener('click', async () => {
         if (!currentFile) return;
 
         loading.style.display = 'flex';
+        loadingText.textContent = '正在处理中...';
 
         const formData = new FormData();
         formData.append('image', currentFile);
+        formData.append('format', outputFormat.value);
+        formData.append('quality', outputQuality.value);
 
-        // 判断是去水印还是添加水印
         const isAddWatermark = methodSelect.value === 'add-watermark';
         let apiUrl = '/api/remove-watermark';
 
@@ -406,7 +697,6 @@ document.addEventListener('DOMContentLoaded', function() {
             resultPlaceholder.style.display = 'none';
             downloadBtn.disabled = false;
 
-            // 成功效果
             const resultBox = document.querySelector('.result-box');
             resultBox.style.boxShadow = '0 0 0 3px rgba(13, 148, 136, 0.3)';
             setTimeout(() => {
@@ -420,7 +710,213 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ============================================
+    // 批量处理相关
+    // ============================================
+
+    // 批量方法切换
+    const batchAutoOptions = document.getElementById('batchAutoOptions');
+    const batchColorOptions = document.getElementById('batchColorOptions');
+    const batchWatermarkOptions = document.getElementById('batchWatermarkOptions');
+    const batchThreshold = document.getElementById('batchThreshold');
+    const batchThresholdValue = document.getElementById('batchThresholdValue');
+
+    batchMethodSelect.addEventListener('change', () => {
+        batchAutoOptions.style.display = 'none';
+        batchColorOptions.style.display = 'none';
+        batchWatermarkOptions.style.display = 'none';
+
+        switch (batchMethodSelect.value) {
+            case 'auto':
+                batchAutoOptions.style.display = 'block';
+                break;
+            case 'color':
+                batchColorOptions.style.display = 'block';
+                break;
+            case 'add-watermark':
+                batchWatermarkOptions.style.display = 'block';
+                break;
+        }
+    });
+
+    batchThreshold.addEventListener('input', () => {
+        batchThresholdValue.textContent = batchThreshold.value;
+    });
+
+    batchOutputQuality.addEventListener('input', () => {
+        batchQualityValue.textContent = batchOutputQuality.value + '%';
+    });
+
+    // 批量水印标签切换
+    const batchTextTab = document.getElementById('batchTextTab');
+    const batchImageTab = document.getElementById('batchImageTab');
+    const batchTextWatermarkPanel = document.getElementById('batchTextWatermarkPanel');
+    const batchImageWatermarkPanel = document.getElementById('batchImageWatermarkPanel');
+
+    batchTextTab.addEventListener('click', () => {
+        batchTextTab.classList.add('active');
+        batchImageTab.classList.remove('active');
+        batchTextWatermarkPanel.style.display = 'block';
+        batchImageWatermarkPanel.style.display = 'none';
+        batchWatermarkType = 'text';
+    });
+
+    batchImageTab.addEventListener('click', () => {
+        batchImageTab.classList.add('active');
+        batchTextTab.classList.remove('active');
+        batchTextWatermarkPanel.style.display = 'none';
+        batchImageWatermarkPanel.style.display = 'block';
+        batchWatermarkType = 'image';
+    });
+
+    // 批量水印图片上传
+    const batchWatermarkUploadArea = document.getElementById('batchWatermarkUploadArea');
+    const batchWatermarkImageInput = document.getElementById('batchWatermarkImageInput');
+    const batchWatermarkPreview = document.getElementById('batchWatermarkPreview');
+
+    batchWatermarkUploadArea.addEventListener('click', () => {
+        batchWatermarkImageInput.click();
+    });
+
+    batchWatermarkImageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            batchWatermarkFile = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                batchWatermarkPreview.src = e.target.result;
+                batchWatermarkPreview.style.display = 'block';
+                batchWatermarkUploadArea.querySelector('.watermark-upload-prompt').style.display = 'none';
+            };
+            reader.readAsDataURL(batchWatermarkFile);
+        }
+    });
+
+    // 批量水印参数滑块
+    const batchFontSize = document.getElementById('batchFontSize');
+    const batchFontSizeValue = document.getElementById('batchFontSizeValue');
+    const batchRotation = document.getElementById('batchRotation');
+    const batchRotationValue = document.getElementById('batchRotationValue');
+    const batchWatermarkScale = document.getElementById('batchWatermarkScale');
+    const batchScaleValue = document.getElementById('batchScaleValue');
+    const batchWatermarkOpacity = document.getElementById('batchWatermarkOpacity');
+    const batchOpacityValue = document.getElementById('batchOpacityValue');
+    const batchWatermarkMargin = document.getElementById('batchWatermarkMargin');
+    const batchMarginValue = document.getElementById('batchMarginValue');
+
+    batchFontSize.addEventListener('input', () => {
+        batchFontSizeValue.textContent = batchFontSize.value;
+    });
+
+    batchRotation.addEventListener('input', () => {
+        batchRotationValue.textContent = batchRotation.value + '°';
+    });
+
+    batchWatermarkScale.addEventListener('input', () => {
+        batchScaleValue.textContent = batchWatermarkScale.value + '%';
+    });
+
+    batchWatermarkOpacity.addEventListener('input', () => {
+        batchOpacityValue.textContent = batchWatermarkOpacity.value + '%';
+    });
+
+    batchWatermarkMargin.addEventListener('input', () => {
+        batchMarginValue.textContent = batchWatermarkMargin.value + 'px';
+    });
+
+    // 批量处理按钮
+    batchProcessBtn.addEventListener('click', async () => {
+        if (batchFiles.length === 0) {
+            showAlert('请先上传图片');
+            return;
+        }
+
+        loading.style.display = 'flex';
+        loadingText.textContent = `正在处理 ${batchFiles.length} 张图片...`;
+
+        const formData = new FormData();
+
+        batchFiles.forEach((file, index) => {
+            formData.append('images', file);
+        });
+
+        formData.append('format', batchOutputFormat.value);
+        formData.append('quality', batchOutputQuality.value);
+
+        let apiUrl;
+        const method = batchMethodSelect.value;
+
+        if (method === 'add-watermark') {
+            apiUrl = '/api/batch-add-watermark';
+            formData.append('type', batchWatermarkType);
+            formData.append('position', document.getElementById('batchWatermarkPosition').value);
+            formData.append('opacity', batchWatermarkOpacity.value / 100);
+            formData.append('margin', batchWatermarkMargin.value);
+
+            if (batchWatermarkType === 'text') {
+                const text = document.getElementById('batchWatermarkText').value;
+                if (!text.trim()) {
+                    showAlert('请输入水印文字');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('text', text);
+                formData.append('font_size', batchFontSize.value);
+                formData.append('font_color', document.getElementById('batchFontColor').value);
+                formData.append('rotation', batchRotation.value);
+            } else {
+                if (!batchWatermarkFile) {
+                    showAlert('请上传水印图片');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('watermark_image', batchWatermarkFile);
+                formData.append('scale', batchWatermarkScale.value / 100);
+            }
+        } else {
+            apiUrl = '/api/batch-remove-watermark';
+            formData.append('method', method);
+
+            if (method === 'auto') {
+                formData.append('threshold', batchThreshold.value);
+            } else if (method === 'color') {
+                formData.append('color_lower', document.getElementById('batchColorLower').value);
+                formData.append('color_upper', document.getElementById('batchColorUpper').value);
+            }
+        }
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('处理失败');
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = method === 'add-watermark' ? 'watermarked.zip' : 'watermark_removed.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showAlert(`���功处理 ${batchFiles.length} 张图片！`);
+
+        } catch (error) {
+            showAlert('处理失败：' + error.message);
+        } finally {
+            loading.style.display = 'none';
+        }
+    });
+
+    // ============================================
     // 提示框
+    // ============================================
+
     function showAlert(message) {
         const alertBox = document.createElement('div');
         alertBox.innerHTML = `
@@ -438,27 +934,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 z-index: 10000;
             ">
                 <div style="
-                    background: rgba(255, 255, 255, 0.95);
+                    background: var(--glass-bg-hover);
                     backdrop-filter: blur(20px);
                     padding: 32px 40px;
                     border-radius: 16px;
-                    border: 1px solid rgba(255, 255, 255, 0.4);
+                    border: 1px solid var(--glass-border);
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
                     text-align: center;
                     max-width: 400px;
                 ">
-                    <svg style="width: 48px; height: 48px; color: #F97316; margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                         <line x1="12" y1="8" x2="12" y2="12"/>
                         <line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
-                    <p style="color: #134E4A; font-size: 1rem; margin-bottom: 24px; line-height: 1.6;">${message}</p>
+                    <p style="color: var(--text-primary); font-size: 1rem; margin-bottom: 24px; line-height: 1.6;">${message}</p>
                     <button style="
                         font-family: inherit;
                         font-size: 0.95rem;
                         font-weight: 600;
                         padding: 12px 32px;
-                        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+                        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
                         color: white;
                         border: none;
                         border-radius: 9999px;
@@ -482,23 +978,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ============================================
     // 下载按钮
+    // ============================================
+
     downloadBtn.addEventListener('click', () => {
         if (!resultBlob) return;
 
         const url = URL.createObjectURL(resultBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'watermark_removed_' + currentFile.name.replace(/\.[^/.]+$/, '') + '.png';
+        const ext = outputFormat.value === 'jpg' ? 'jpg' : outputFormat.value;
+        a.download = 'processed_' + currentFile.name.replace(/\.[^/.]+$/, '') + '.' + ext;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
 
+    // ============================================
     // 重置按钮
+    // ============================================
+
     resetBtn.addEventListener('click', () => {
-        // 过渡动画
         previewSection.style.transition = 'all 0.3s ease';
         previewSection.style.opacity = '0';
         previewSection.style.transform = 'translateY(10px)';
@@ -511,7 +1013,6 @@ document.addEventListener('DOMContentLoaded', function() {
             watermarkImageInput.value = '';
             previewSection.style.display = 'none';
 
-            // 重置水印预览
             watermarkPreview.style.display = 'none';
             watermarkPreview.src = '';
             const watermarkPrompt = watermarkUploadArea.querySelector('.watermark-upload-prompt');
