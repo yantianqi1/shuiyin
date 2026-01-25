@@ -4,3 +4,4 @@ opencv-python
 numpy
 pillow
 zipfile36
+qrcode[pil]

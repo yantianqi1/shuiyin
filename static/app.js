@@ -90,6 +90,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let batchWatermarkFile = null;
     let batchWatermarkType = 'text';
 
+    // 新水印类型面板引用
+    const qrcodeWatermarkPanel = document.getElementById('qrcodeWatermarkPanel');
+    const datetimeWatermarkPanel = document.getElementById('datetimeWatermarkPanel');
+    const qrcodeScale = document.getElementById('qrcodeScale');
+    const qrcodeScaleValue = document.getElementById('qrcodeScaleValue');
+    const datetimeFormat = document.getElementById('datetimeFormat');
+    const customDatetimeFormatGroup = document.getElementById('customDatetimeFormatGroup');
+    const datetimeFontSize = document.getElementById('datetimeFontSize');
+    const datetimeFontSizeValue = document.getElementById('datetimeFontSizeValue');
+    const datetimeRotation = document.getElementById('datetimeRotation');
+    const datetimeRotationValue = document.getElementById('datetimeRotationValue');
+
     // 区域选择相关
     let isDrawing = false;
     let startX, startY;
@@ -444,12 +456,21 @@ document.addEventListener('DOMContentLoaded', function() {
             tab.classList.add('active');
             currentWatermarkType = tab.dataset.type;
 
+            // 隐藏所有面板
+            textWatermarkPanel.style.display = 'none';
+            imageWatermarkPanel.style.display = 'none';
+            if (qrcodeWatermarkPanel) qrcodeWatermarkPanel.style.display = 'none';
+            if (datetimeWatermarkPanel) datetimeWatermarkPanel.style.display = 'none';
+
+            // 显示对应面板
             if (currentWatermarkType === 'text') {
                 textWatermarkPanel.style.display = 'block';
-                imageWatermarkPanel.style.display = 'none';
-            } else {
-                textWatermarkPanel.style.display = 'none';
+            } else if (currentWatermarkType === 'image') {
                 imageWatermarkPanel.style.display = 'block';
+            } else if (currentWatermarkType === 'qrcode') {
+                qrcodeWatermarkPanel.style.display = 'block';
+            } else if (currentWatermarkType === 'datetime') {
+                datetimeWatermarkPanel.style.display = 'block';
             }
         });
     });
@@ -498,6 +519,36 @@ document.addEventListener('DOMContentLoaded', function() {
     watermarkMargin.addEventListener('input', () => {
         marginValue.textContent = watermarkMargin.value + 'px';
     });
+
+    // 二维码水印滑块
+    if (qrcodeScale) {
+        qrcodeScale.addEventListener('input', () => {
+            qrcodeScaleValue.textContent = qrcodeScale.value + '%';
+        });
+    }
+
+    // 日期时间水印滑块和格式切换
+    if (datetimeFontSize) {
+        datetimeFontSize.addEventListener('input', () => {
+            datetimeFontSizeValue.textContent = datetimeFontSize.value;
+        });
+    }
+
+    if (datetimeRotation) {
+        datetimeRotation.addEventListener('input', () => {
+            datetimeRotationValue.textContent = datetimeRotation.value + '°';
+        });
+    }
+
+    if (datetimeFormat) {
+        datetimeFormat.addEventListener('change', () => {
+            if (datetimeFormat.value === 'custom') {
+                customDatetimeFormatGroup.style.display = 'block';
+            } else {
+                customDatetimeFormatGroup.style.display = 'none';
+            }
+        });
+    }
 
     // 输出质量滑块
     outputQuality.addEventListener('input', () => {
@@ -649,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('font_size', fontSize.value);
                 formData.append('font_color', fontColor.value);
                 formData.append('rotation', rotation.value);
-            } else {
+            } else if (currentWatermarkType === 'image') {
                 if (!watermarkFile) {
                     showAlert('请上传水印图片');
                     loading.style.display = 'none';
@@ -657,6 +708,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 formData.append('watermark_image', watermarkFile);
                 formData.append('scale', watermarkScale.value / 100);
+            } else if (currentWatermarkType === 'qrcode') {
+                const qrcodeUrl = document.getElementById('qrcodeUrl').value;
+                if (!qrcodeUrl.trim()) {
+                    showAlert('请输入二维码链接');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('url', qrcodeUrl);
+                formData.append('scale', document.getElementById('qrcodeScale').value / 100);
+                formData.append('fill_color', document.getElementById('qrcodeFillColor').value);
+                formData.append('back_color', document.getElementById('qrcodeBackColor').value);
+            } else if (currentWatermarkType === 'datetime') {
+                const dtFormat = document.getElementById('datetimeFormat').value;
+                if (dtFormat === 'custom') {
+                    const customFormat = document.getElementById('customDatetimeFormat').value;
+                    formData.append('custom_text', customFormat || '%Y-%m-%d %H:%M:%S');
+                } else {
+                    formData.append('format', dtFormat);
+                }
+                formData.append('font_size', document.getElementById('datetimeFontSize').value);
+                formData.append('font_color', document.getElementById('datetimeFontColor').value);
+                formData.append('rotation', document.getElementById('datetimeRotation').value);
             }
         } else {
             formData.append('method', methodSelect.value);
@@ -756,24 +829,81 @@ document.addEventListener('DOMContentLoaded', function() {
     // 批量水印标签切换
     const batchTextTab = document.getElementById('batchTextTab');
     const batchImageTab = document.getElementById('batchImageTab');
+    const batchQrcodeTab = document.getElementById('batchQrcodeTab');
+    const batchDatetimeTab = document.getElementById('batchDatetimeTab');
     const batchTextWatermarkPanel = document.getElementById('batchTextWatermarkPanel');
     const batchImageWatermarkPanel = document.getElementById('batchImageWatermarkPanel');
+    const batchQrcodeWatermarkPanel = document.getElementById('batchQrcodeWatermarkPanel');
+    const batchDatetimeWatermarkPanel = document.getElementById('batchDatetimeWatermarkPanel');
 
-    batchTextTab.addEventListener('click', () => {
-        batchTextTab.classList.add('active');
-        batchImageTab.classList.remove('active');
-        batchTextWatermarkPanel.style.display = 'block';
-        batchImageWatermarkPanel.style.display = 'none';
-        batchWatermarkType = 'text';
-    });
+    function switchBatchWatermarkTab(type) {
+        // 移除所有active
+        [batchTextTab, batchImageTab, batchQrcodeTab, batchDatetimeTab].forEach(tab => {
+            if (tab) tab.classList.remove('active');
+        });
+        // 隐藏所有面板
+        [batchTextWatermarkPanel, batchImageWatermarkPanel, batchQrcodeWatermarkPanel, batchDatetimeWatermarkPanel].forEach(panel => {
+            if (panel) panel.style.display = 'none';
+        });
 
-    batchImageTab.addEventListener('click', () => {
-        batchImageTab.classList.add('active');
-        batchTextTab.classList.remove('active');
-        batchTextWatermarkPanel.style.display = 'none';
-        batchImageWatermarkPanel.style.display = 'block';
-        batchWatermarkType = 'image';
-    });
+        batchWatermarkType = type;
+
+        if (type === 'text') {
+            batchTextTab.classList.add('active');
+            batchTextWatermarkPanel.style.display = 'block';
+        } else if (type === 'image') {
+            batchImageTab.classList.add('active');
+            batchImageWatermarkPanel.style.display = 'block';
+        } else if (type === 'qrcode' && batchQrcodeTab) {
+            batchQrcodeTab.classList.add('active');
+            batchQrcodeWatermarkPanel.style.display = 'block';
+        } else if (type === 'datetime' && batchDatetimeTab) {
+            batchDatetimeTab.classList.add('active');
+            batchDatetimeWatermarkPanel.style.display = 'block';
+        }
+    }
+
+    batchTextTab.addEventListener('click', () => switchBatchWatermarkTab('text'));
+    batchImageTab.addEventListener('click', () => switchBatchWatermarkTab('image'));
+    if (batchQrcodeTab) batchQrcodeTab.addEventListener('click', () => switchBatchWatermarkTab('qrcode'));
+    if (batchDatetimeTab) batchDatetimeTab.addEventListener('click', () => switchBatchWatermarkTab('datetime'));
+
+    // 批量日期格式切换
+    const batchDatetimeFormat = document.getElementById('batchDatetimeFormat');
+    const batchCustomDatetimeFormatGroup = document.getElementById('batchCustomDatetimeFormatGroup');
+    if (batchDatetimeFormat) {
+        batchDatetimeFormat.addEventListener('change', () => {
+            if (batchDatetimeFormat.value === 'custom') {
+                batchCustomDatetimeFormatGroup.style.display = 'block';
+            } else {
+                batchCustomDatetimeFormatGroup.style.display = 'none';
+            }
+        });
+    }
+
+    // 批量日期时间滑块
+    const batchDatetimeFontSize = document.getElementById('batchDatetimeFontSize');
+    const batchDatetimeFontSizeValue = document.getElementById('batchDatetimeFontSizeValue');
+    const batchDatetimeRotation = document.getElementById('batchDatetimeRotation');
+    const batchDatetimeRotationValue = document.getElementById('batchDatetimeRotationValue');
+    const batchQrcodeScale = document.getElementById('batchQrcodeScale');
+    const batchQrcodeScaleValue = document.getElementById('batchQrcodeScaleValue');
+
+    if (batchDatetimeFontSize) {
+        batchDatetimeFontSize.addEventListener('input', () => {
+            batchDatetimeFontSizeValue.textContent = batchDatetimeFontSize.value;
+        });
+    }
+    if (batchDatetimeRotation) {
+        batchDatetimeRotation.addEventListener('input', () => {
+            batchDatetimeRotationValue.textContent = batchDatetimeRotation.value + '°';
+        });
+    }
+    if (batchQrcodeScale) {
+        batchQrcodeScale.addEventListener('input', () => {
+            batchQrcodeScaleValue.textContent = batchQrcodeScale.value + '%';
+        });
+    }
 
     // 批量水印图片上传
     const batchWatermarkUploadArea = document.getElementById('batchWatermarkUploadArea');
@@ -1262,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('font_size', batchFontSize.value);
                 formData.append('font_color', document.getElementById('batchFontColor').value);
                 formData.append('rotation', batchRotation.value);
-            } else {
+            } else if (batchWatermarkType === 'image') {
                 if (!batchWatermarkFile) {
                     showAlert('请上传水印图片');
                     loading.style.display = 'none';
@@ -1270,6 +1400,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 formData.append('watermark_image', batchWatermarkFile);
                 formData.append('scale', batchWatermarkScale.value / 100);
+            } else if (batchWatermarkType === 'qrcode') {
+                const url = document.getElementById('batchQrcodeUrl').value;
+                if (!url.trim()) {
+                    showAlert('请输入二维码链接');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('url', url);
+                formData.append('scale', document.getElementById('batchQrcodeScale').value / 100);
+                formData.append('fill_color', document.getElementById('batchQrcodeFillColor').value);
+                formData.append('back_color', document.getElementById('batchQrcodeBackColor').value);
+            } else if (batchWatermarkType === 'datetime') {
+                const dtFormat = document.getElementById('batchDatetimeFormat').value;
+                if (dtFormat === 'custom') {
+                    const customFormat = document.getElementById('batchCustomDatetimeFormat').value;
+                    formData.append('custom_text', customFormat || '%Y-%m-%d %H:%M:%S');
+                } else {
+                    formData.append('datetime_format', dtFormat);
+                }
+                formData.append('font_size', document.getElementById('batchDatetimeFontSize').value);
+                formData.append('font_color', document.getElementById('batchDatetimeFontColor').value);
+                formData.append('rotation', document.getElementById('batchDatetimeRotation').value);
             }
         } else {
             apiUrl = '/api/batch-remove-watermark';

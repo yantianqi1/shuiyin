@@ -3,6 +3,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import io
 import os
+import qrcode
+from datetime import datetime
 
 
 def remove_watermark_inpaint(image_bytes: bytes, mask_bytes: bytes) -> bytes:
@@ -344,3 +346,96 @@ def add_image_watermark(image_bytes: bytes, watermark_bytes: bytes,
     output = io.BytesIO()
     result_rgb.save(output, format='PNG')
     return output.getvalue()
+
+
+def add_qrcode_watermark(image_bytes: bytes, url: str,
+                         scale: float = 0.15, opacity: float = 0.8,
+                         position: str = 'bottom-right', margin: int = 20,
+                         custom_x: int = 0, custom_y: int = 0,
+                         fill_color: str = '#000000',
+                         back_color: str = '#FFFFFF') -> bytes:
+    """
+    添加二维码水印
+    根据输入的URL生成二维码并添加为水印
+    """
+    # 打开原始图片
+    img = Image.open(io.BytesIO(image_bytes)).convert('RGBA')
+    img_width, img_height = img.size
+
+    # 生成二维码
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    # 转换颜色
+    fill_rgb = hex_to_rgb(fill_color)
+    back_rgb = hex_to_rgb(back_color)
+
+    qr_img = qr.make_image(fill_color=fill_rgb, back_color=back_rgb)
+    qr_img = qr_img.convert('RGBA')
+
+    # 缩放二维码
+    qr_width = int(img_width * scale)
+    qr_height = int(qr_img.height * (qr_width / qr_img.width))
+    qr_img = qr_img.resize((qr_width, qr_height), Image.LANCZOS)
+
+    # 调整透明度
+    if opacity < 1.0:
+        r, g, b, a = qr_img.split()
+        a = a.point(lambda x: int(x * opacity))
+        qr_img = Image.merge('RGBA', (r, g, b, a))
+
+    if position == 'tile':
+        # 平铺模式
+        result = img.copy()
+        spacing_x = qr_width + 80
+        spacing_y = qr_height + 80
+
+        for y in range(0, img_height, spacing_y):
+            for x in range(0, img_width, spacing_x):
+                result.paste(qr_img, (x, y), qr_img)
+    else:
+        # 单个水印
+        x, y = calculate_position(img_width, img_height, qr_width, qr_height,
+                                   position, margin, custom_x, custom_y)
+        result = img.copy()
+        result.paste(qr_img, (x, y), qr_img)
+
+    # 转换为 RGB 并保存
+    result_rgb = result.convert('RGB')
+    output = io.BytesIO()
+    result_rgb.save(output, format='PNG')
+    return output.getvalue()
+
+
+def add_datetime_watermark(image_bytes: bytes,
+                           format_str: str = '%Y-%m-%d %H:%M:%S',
+                           font_size: int = 36, font_color: str = '#FFFFFF',
+                           opacity: float = 0.5, rotation: float = 0,
+                           position: str = 'bottom-right', margin: int = 20,
+                           custom_x: int = 0, custom_y: int = 0,
+                           custom_text: str = '') -> bytes:
+    """
+    添加日期时间水印
+    自动添加当前日期/时间戳，支持自定义格式
+    """
+    # 生成日期时间文字
+    if custom_text:
+        # 支持在自定义文字中嵌入日期时间
+        text = datetime.now().strftime(custom_text)
+    else:
+        text = datetime.now().strftime(format_str)
+
+    # 使用现有的文字水印函数
+    return add_text_watermark(
+        image_bytes, text,
+        font_size=font_size, font_color=font_color,
+        opacity=opacity, rotation=rotation,
+        position=position, margin=margin,
+        custom_x=custom_x, custom_y=custom_y
+    )

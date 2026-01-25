@@ -250,6 +250,8 @@
                     <div class="watermark-tabs">
                         <button type="button" class="watermark-tab active" data-type="text">文字水印</button>
                         <button type="button" class="watermark-tab" data-type="image">图片水印</button>
+                        <button type="button" class="watermark-tab" data-type="qrcode">二维码</button>
+                        <button type="button" class="watermark-tab" data-type="datetime">日期时间</button>
                     </div>
 
                     <!-- 文字水印选项 -->
@@ -303,6 +305,76 @@
                             <div class="slider-labels">
                                 <span>5%</span>
                                 <span>50%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 二维码水印选项 -->
+                    <div class="watermark-panel" id="qrcodeWatermarkPanel" style="display: none;">
+                        <div class="form-group">
+                            <label>二维码链接</label>
+                            <input type="text" id="qrcodeUrl" placeholder="请输入链接，如 https://example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>缩放比例：<span id="qrcodeScaleValue" class="value-display">15%</span></label>
+                            <input type="range" id="qrcodeScale" min="5" max="40" value="15">
+                            <div class="slider-labels">
+                                <span>5%</span>
+                                <span>40%</span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>
+                                    <span class="color-label">二维码颜色</span>
+                                    <input type="color" id="qrcodeFillColor" value="#000000">
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <span class="color-label">背景颜色</span>
+                                    <input type="color" id="qrcodeBackColor" value="#ffffff">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 日期时间水印选项 -->
+                    <div class="watermark-panel" id="datetimeWatermarkPanel" style="display: none;">
+                        <div class="form-group">
+                            <label>日期格式</label>
+                            <select id="datetimeFormat">
+                                <option value="%Y-%m-%d %H:%M:%S">完整日期时间 (2025-01-25 14:30:00)</option>
+                                <option value="%Y-%m-%d">仅日期 (2025-01-25)</option>
+                                <option value="%H:%M:%S">仅时间 (14:30:00)</option>
+                                <option value="%Y年%m月%d日">中文日期 (2025年01月25日)</option>
+                                <option value="%Y年%m月%d日 %H:%M">中文日期时间 (2025年01月25日 14:30)</option>
+                                <option value="custom">自定义格式</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="customDatetimeFormatGroup" style="display: none;">
+                            <label>自定义格式</label>
+                            <input type="text" id="customDatetimeFormat" placeholder="如：拍摄于 %Y-%m-%d">
+                            <p class="format-hint">格式说明：%Y=年 %m=月 %d=日 %H=时 %M=分 %S=秒</p>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>字体大小：<span id="datetimeFontSizeValue" class="value-display">36</span></label>
+                                <input type="range" id="datetimeFontSize" min="12" max="120" value="36">
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <span class="color-label">字体颜色</span>
+                                    <input type="color" id="datetimeFontColor" value="#ffffff">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>旋转角度：<span id="datetimeRotationValue" class="value-display">0°</span></label>
+                            <input type="range" id="datetimeRotation" min="-180" max="180" value="0">
+                            <div class="slider-labels">
+                                <span>-180°</span>
+                                <span>180°</span>
                             </div>
                         </div>
                     </div>
@@ -508,18 +580,21 @@
                             </div>
                             <img id="regionMarkerImage" alt="标记图片" style="display: none;">
                             <canvas id="regionMarkerCanvas"></canvas>
-                            <div class="region-marker-toolbar" id="regionMarkerToolbar" style="display: none;">
-                                <button type="button" class="marker-tool-btn" id="clearRegionBtn" title="清除选区">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                                    </svg>
-                                </button>
-                                <button type="button" class="marker-tool-btn confirm" id="confirmRegionBtn" title="确认选区">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="20 6 9 17 4 12"/>
-                                    </svg>
-                                </button>
-                            </div>
+                        </div>
+
+                        <div class="region-marker-toolbar" id="regionMarkerToolbar" style="display: none;">
+                            <button type="button" class="marker-tool-btn" id="clearRegionBtn" title="清除选区">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                                <span>清除</span>
+                            </button>
+                            <button type="button" class="marker-tool-btn confirm" id="confirmRegionBtn" title="确认选区">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                <span>确认</span>
+                            </button>
                         </div>
 
                         <div class="region-coords-display" id="regionCoordsDisplay" style="display: none;">
@@ -559,8 +634,10 @@
                 <div class="method-options" id="batchWatermarkOptions" style="display: none;">
                     <div class="option-header">水印设置</div>
                     <div class="watermark-tabs">
-                        <button type="button" class="watermark-tab active" data-type="text" id="batchTextTab">文字水印</button>
-                        <button type="button" class="watermark-tab" data-type="image" id="batchImageTab">图片水印</button>
+                        <button type="button" class="watermark-tab active" data-type="text" id="batchTextTab">文字</button>
+                        <button type="button" class="watermark-tab" data-type="image" id="batchImageTab">图片</button>
+                        <button type="button" class="watermark-tab" data-type="qrcode" id="batchQrcodeTab">二维码</button>
+                        <button type="button" class="watermark-tab" data-type="datetime" id="batchDatetimeTab">日期时间</button>
                     </div>
                     <div id="batchTextWatermarkPanel">
                         <div class="form-group">
@@ -596,6 +673,54 @@
                         <div class="form-group">
                             <label>缩放：<span id="batchScaleValue" class="value-display">20%</span></label>
                             <input type="range" id="batchWatermarkScale" min="5" max="50" value="20">
+                        </div>
+                    </div>
+                    <div id="batchQrcodeWatermarkPanel" style="display: none;">
+                        <div class="form-group">
+                            <label>二维码链接</label>
+                            <input type="text" id="batchQrcodeUrl" placeholder="请输入链接，如 https://example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>缩放比例：<span id="batchQrcodeScaleValue" class="value-display">15%</span></label>
+                            <input type="range" id="batchQrcodeScale" min="5" max="40" value="15">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><span class="color-label">二维码颜色</span><input type="color" id="batchQrcodeFillColor" value="#000000"></label>
+                            </div>
+                            <div class="form-group">
+                                <label><span class="color-label">背景颜色</span><input type="color" id="batchQrcodeBackColor" value="#ffffff"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="batchDatetimeWatermarkPanel" style="display: none;">
+                        <div class="form-group">
+                            <label>日期格式</label>
+                            <select id="batchDatetimeFormat">
+                                <option value="%Y-%m-%d %H:%M:%S">完整日期时间</option>
+                                <option value="%Y-%m-%d">仅日期</option>
+                                <option value="%H:%M:%S">仅时间</option>
+                                <option value="%Y年%m月%d日">中文日期</option>
+                                <option value="%Y年%m月%d日 %H:%M">中文日期时间</option>
+                                <option value="custom">自定义格式</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="batchCustomDatetimeFormatGroup" style="display: none;">
+                            <label>自定义格式</label>
+                            <input type="text" id="batchCustomDatetimeFormat" placeholder="如：拍摄于 %Y-%m-%d">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>字体大小：<span id="batchDatetimeFontSizeValue" class="value-display">36</span></label>
+                                <input type="range" id="batchDatetimeFontSize" min="12" max="120" value="36">
+                            </div>
+                            <div class="form-group">
+                                <label><span class="color-label">颜色</span><input type="color" id="batchDatetimeFontColor" value="#ffffff"></label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>旋转：<span id="batchDatetimeRotationValue" class="value-display">0°</span></label>
+                            <input type="range" id="batchDatetimeRotation" min="-180" max="180" value="0">
                         </div>
                     </div>
                     <div class="form-group">

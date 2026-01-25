@@ -11,7 +11,9 @@ from backend.watermark_remover import (
     remove_watermark_color,
     remove_watermark_frequency,
     add_text_watermark,
-    add_image_watermark
+    add_image_watermark,
+    add_qrcode_watermark,
+    add_datetime_watermark
 )
 
 app = Flask(__name__)
@@ -261,7 +263,8 @@ def batch_add_watermark():
                         position=position, margin=margin,
                         custom_x=custom_x, custom_y=custom_y
                     )
-                else:
+
+                elif watermark_type == 'image':
                     scale = float(request.form.get('scale', 0.2))
                     result_bytes = add_image_watermark(
                         image_bytes, watermark_bytes,
@@ -269,6 +272,42 @@ def batch_add_watermark():
                         position=position, margin=margin,
                         custom_x=custom_x, custom_y=custom_y
                     )
+
+                elif watermark_type == 'qrcode':
+                    url = request.form.get('url', '')
+                    if not url:
+                        return {'error': '请输入二维码链接'}, 400
+
+                    scale = float(request.form.get('scale', 0.15))
+                    fill_color = request.form.get('fill_color', '#000000')
+                    back_color = request.form.get('back_color', '#FFFFFF')
+
+                    result_bytes = add_qrcode_watermark(
+                        image_bytes, url,
+                        scale=scale, opacity=opacity,
+                        position=position, margin=margin,
+                        custom_x=custom_x, custom_y=custom_y,
+                        fill_color=fill_color, back_color=back_color
+                    )
+
+                elif watermark_type == 'datetime':
+                    format_str = request.form.get('datetime_format', '%Y-%m-%d %H:%M:%S')
+                    custom_text = request.form.get('custom_text', '')
+                    font_size = int(request.form.get('font_size', 36))
+                    font_color = request.form.get('font_color', '#FFFFFF')
+                    rotation = float(request.form.get('rotation', 0))
+
+                    result_bytes = add_datetime_watermark(
+                        image_bytes,
+                        format_str=format_str, custom_text=custom_text,
+                        font_size=font_size, font_color=font_color,
+                        opacity=opacity, rotation=rotation,
+                        position=position, margin=margin,
+                        custom_x=custom_x, custom_y=custom_y
+                    )
+
+                else:
+                    return {'error': '未知的水印类型'}, 400
 
                 # 格式转换
                 result_bytes = convert_image_format(result_bytes, output_format, quality)
@@ -344,6 +383,39 @@ def add_watermark():
             result_bytes = add_image_watermark(
                 image_bytes, watermark_bytes,
                 scale=scale, opacity=opacity,
+                position=position, margin=margin,
+                custom_x=custom_x, custom_y=custom_y
+            )
+
+        elif watermark_type == 'qrcode':
+            url = request.form.get('url', '')
+            if not url:
+                return {'error': '请输入二维码链接'}, 400
+
+            scale = float(request.form.get('scale', 0.15))
+            fill_color = request.form.get('fill_color', '#000000')
+            back_color = request.form.get('back_color', '#FFFFFF')
+
+            result_bytes = add_qrcode_watermark(
+                image_bytes, url,
+                scale=scale, opacity=opacity,
+                position=position, margin=margin,
+                custom_x=custom_x, custom_y=custom_y,
+                fill_color=fill_color, back_color=back_color
+            )
+
+        elif watermark_type == 'datetime':
+            format_str = request.form.get('format', '%Y-%m-%d %H:%M:%S')
+            custom_text = request.form.get('custom_text', '')
+            font_size = int(request.form.get('font_size', 36))
+            font_color = request.form.get('font_color', '#FFFFFF')
+            rotation = float(request.form.get('rotation', 0))
+
+            result_bytes = add_datetime_watermark(
+                image_bytes,
+                format_str=format_str, custom_text=custom_text,
+                font_size=font_size, font_color=font_color,
+                opacity=opacity, rotation=rotation,
                 position=position, margin=margin,
                 custom_x=custom_x, custom_y=custom_y
             )

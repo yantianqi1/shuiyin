@@ -959,18 +959,20 @@ h1::before {
 /* 水印类型标签页 */
 .watermark-tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 20px;
     padding: 4px;
     background: rgba(255, 255, 255, 0.3);
     border-radius: var(--radius-sm);
+    flex-wrap: wrap;
 }
 
 .watermark-tab {
     flex: 1;
-    padding: 12px 20px;
+    min-width: 70px;
+    padding: 10px 14px;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 500;
     color: var(--text-secondary);
     background: transparent;
@@ -978,6 +980,7 @@ h1::before {
     border-radius: 8px;
     cursor: pointer;
     transition: all var(--transition-fast);
+    white-space: nowrap;
 }
 
 .watermark-tab:hover {
@@ -1174,6 +1177,15 @@ h1::before {
     max-height: 100px;
     object-fit: contain;
     border-radius: 8px;
+}
+
+/* 格式说明提示 */
+.format-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-style: italic;
+    line-height: 1.5;
 }
 
 /* 自定义坐标 */
@@ -1690,16 +1702,14 @@ input:focus-visible {
 }
 
 .region-marker-toolbar {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
     display: flex;
     gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
 }
 
 .marker-tool-btn {
-    width: 40px;
-    height: 40px;
+    padding: 8px 16px;
     border: none;
     border-radius: var(--radius-sm);
     background: rgba(0, 0, 0, 0.6);
@@ -1709,12 +1719,15 @@ input:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
     transition: all var(--transition-fast);
 }
 
 .marker-tool-btn:hover {
     background: rgba(0, 0, 0, 0.8);
-    transform: scale(1.05);
+    transform: scale(1.02);
 }
 
 .marker-tool-btn.confirm {
@@ -1726,8 +1739,8 @@ input:focus-visible {
 }
 
 .marker-tool-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 .region-coords-display {
