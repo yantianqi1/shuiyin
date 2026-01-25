@@ -440,10 +440,11 @@
                         处理方式
                     </label>
                     <select id="batchMethodSelect">
-                        <option value="auto">自动去水印</option>
+                        <option value="auto">自动去水印（亮度检测）</option>
+                        <option value="region">手动标记区域</option>
                         <option value="color">按颜色去除</option>
                         <option value="frequency">频域滤波</option>
-                        <option value="add-watermark">添加水���</option>
+                        <option value="add-watermark">添加水印</option>
                     </select>
                 </div>
 
@@ -452,6 +453,97 @@
                     <div class="option-header">亮度阈值</div>
                     <label>当前值：<span id="batchThresholdValue" class="value-display">200</span></label>
                     <input type="range" id="batchThreshold" min="100" max="255" value="200">
+                </div>
+
+                <!-- 手动标记区域选项 -->
+                <div class="method-options" id="batchRegionOptions" style="display: none;">
+                    <div class="option-header">
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                        </svg>
+                        手动标记水印区域
+                    </div>
+
+                    <div class="region-mode-select">
+                        <label class="region-mode-label">标记模式</label>
+                        <div class="region-mode-tabs">
+                            <button type="button" class="region-mode-tab active" data-mode="unified">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                </svg>
+                                统一区域
+                            </button>
+                            <button type="button" class="region-mode-tab" data-mode="individual">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="9" height="9" rx="1"/>
+                                    <rect x="13" y="2" width="9" height="9" rx="1"/>
+                                    <rect x="2" y="13" width="9" height="9" rx="1"/>
+                                    <rect x="13" y="13" width="9" height="9" rx="1"/>
+                                    <circle cx="6.5" cy="6.5" r="1.5" fill="currentColor"/>
+                                </svg>
+                                逐张标记
+                            </button>
+                        </div>
+                        <p class="region-mode-hint" id="regionModeHint">所有图片使用相同的水印区域，只需标记一次</p>
+                    </div>
+
+                    <div class="region-marker-section">
+                        <div class="region-marker-header">
+                            <span class="region-marker-title" id="regionMarkerTitle">标记水印区域</span>
+                            <span class="region-marker-progress" id="regionMarkerProgress" style="display: none;">1 / 3</span>
+                        </div>
+
+                        <div class="region-marker-canvas-wrapper" id="regionMarkerWrapper">
+                            <div class="region-marker-placeholder" id="regionMarkerPlaceholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                                <span>选择图片后在此标记水印区域</span>
+                            </div>
+                            <img id="regionMarkerImage" alt="标记图片" style="display: none;">
+                            <canvas id="regionMarkerCanvas"></canvas>
+                            <div class="region-marker-toolbar" id="regionMarkerToolbar" style="display: none;">
+                                <button type="button" class="marker-tool-btn" id="clearRegionBtn" title="清除选区">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="marker-tool-btn confirm" id="confirmRegionBtn" title="确认选区">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="region-coords-display" id="regionCoordsDisplay" style="display: none;">
+                            <span class="coord-chip">X: <span id="batchRegionX">0</span></span>
+                            <span class="coord-chip">Y: <span id="batchRegionY">0</span></span>
+                            <span class="coord-chip">W: <span id="batchRegionW">0</span></span>
+                            <span class="coord-chip">H: <span id="batchRegionH">0</span></span>
+                        </div>
+
+                        <div class="region-nav-buttons" id="regionNavButtons" style="display: none;">
+                            <button type="button" class="btn-nav" id="prevImageBtn" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"/>
+                                </svg>
+                                上一张
+                            </button>
+                            <button type="button" class="btn-nav" id="nextImageBtn">
+                                下一张
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 批量颜色去除选项 -->

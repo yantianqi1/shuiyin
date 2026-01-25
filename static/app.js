@@ -718,6 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const batchAutoOptions = document.getElementById('batchAutoOptions');
     const batchColorOptions = document.getElementById('batchColorOptions');
     const batchWatermarkOptions = document.getElementById('batchWatermarkOptions');
+    const batchRegionOptions = document.getElementById('batchRegionOptions');
     const batchThreshold = document.getElementById('batchThreshold');
     const batchThresholdValue = document.getElementById('batchThresholdValue');
 
@@ -725,10 +726,15 @@ document.addEventListener('DOMContentLoaded', function() {
         batchAutoOptions.style.display = 'none';
         batchColorOptions.style.display = 'none';
         batchWatermarkOptions.style.display = 'none';
+        batchRegionOptions.style.display = 'none';
 
         switch (batchMethodSelect.value) {
             case 'auto':
                 batchAutoOptions.style.display = 'block';
+                break;
+            case 'region':
+                batchRegionOptions.style.display = 'block';
+                initBatchRegionMarker();
                 break;
             case 'color':
                 batchColorOptions.style.display = 'block';
@@ -823,6 +829,399 @@ document.addEventListener('DOMContentLoaded', function() {
         batchMarginValue.textContent = batchWatermarkMargin.value + 'px';
     });
 
+    // ============================================
+    // 批量手动区域标记功能
+    // ============================================
+
+    let batchRegionMode = 'unified'; // unified | individual
+    let batchCurrentImageIndex = 0;
+    let batchRegions = []; // 存储每张图片的区域 [{x, y, w, h}, ...]
+    let unifiedRegion = null; // 统一区域
+    let isMarking = false;
+    let markStartX = 0, markStartY = 0;
+    let currentRegion = null;
+
+    // 元素引用
+    const regionModeTabs = document.querySelectorAll('.region-mode-tab');
+    const regionModeHint = document.getElementById('regionModeHint');
+    const regionMarkerImage = document.getElementById('regionMarkerImage');
+    const regionMarkerCanvas = document.getElementById('regionMarkerCanvas');
+    const regionMarkerPlaceholder = document.getElementById('regionMarkerPlaceholder');
+    const regionMarkerToolbar = document.getElementById('regionMarkerToolbar');
+    const regionCoordsDisplay = document.getElementById('regionCoordsDisplay');
+    const regionNavButtons = document.getElementById('regionNavButtons');
+    const regionMarkerProgress = document.getElementById('regionMarkerProgress');
+    const regionMarkerTitle = document.getElementById('regionMarkerTitle');
+    const clearRegionBtn = document.getElementById('clearRegionBtn');
+    const confirmRegionBtn = document.getElementById('confirmRegionBtn');
+    const prevImageBtn = document.getElementById('prevImageBtn');
+    const nextImageBtn = document.getElementById('nextImageBtn');
+
+    // 模式切换
+    regionModeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            regionModeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            batchRegionMode = tab.dataset.mode;
+
+            if (batchRegionMode === 'unified') {
+                regionModeHint.textContent = '所有图片使用相同的水印区域，只需标记一次';
+                regionNavButtons.style.display = 'none';
+                regionMarkerProgress.style.display = 'none';
+                regionMarkerTitle.textContent = '标记水印区域';
+            } else {
+                regionModeHint.textContent = '每张图片可以标记不同的水印区域';
+                if (batchFiles.length > 1) {
+                    regionNavButtons.style.display = 'flex';
+                    regionMarkerProgress.style.display = 'inline';
+                }
+                updateRegionMarkerProgress();
+            }
+
+            // 重新初始化
+            batchCurrentImageIndex = 0;
+            batchRegions = [];
+            unifiedRegion = null;
+            initBatchRegionMarker();
+        });
+    });
+
+    // 初始化区域标记器
+    function initBatchRegionMarker() {
+        if (batchFiles.length === 0) {
+            regionMarkerPlaceholder.style.display = 'flex';
+            regionMarkerImage.style.display = 'none';
+            regionMarkerCanvas.style.display = 'none';
+            regionMarkerToolbar.style.display = 'none';
+            regionCoordsDisplay.style.display = 'none';
+            return;
+        }
+
+        // 初始化区域数组
+        if (batchRegions.length !== batchFiles.length) {
+            batchRegions = batchFiles.map(() => null);
+        }
+
+        loadImageForMarking(batchCurrentImageIndex);
+    }
+
+    // 加载图片用于标记
+    function loadImageForMarking(index) {
+        if (index < 0 || index >= batchFiles.length) return;
+
+        const file = batchFiles[index];
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            regionMarkerImage.src = e.target.result;
+            regionMarkerImage.onload = () => {
+                setupMarkerCanvas();
+                regionMarkerPlaceholder.style.display = 'none';
+                regionMarkerImage.style.display = 'block';
+                regionMarkerToolbar.style.display = 'flex';
+                regionCoordsDisplay.style.display = 'flex';
+
+                // 恢复之前的选区
+                if (batchRegionMode === 'unified' && unifiedRegion) {
+                    currentRegion = { ...unifiedRegion };
+                    drawRegion();
+                } else if (batchRegions[index]) {
+                    currentRegion = { ...batchRegions[index] };
+                    drawRegion();
+                } else {
+                    currentRegion = null;
+                    clearCanvas();
+                }
+
+                updateCoordsDisplay();
+                updateRegionMarkerProgress();
+            };
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    // 设置Canvas
+    function setupMarkerCanvas() {
+        const img = regionMarkerImage;
+        const wrapper = document.getElementById('regionMarkerWrapper');
+
+        // 获取图片在容器中的实际显示尺寸
+        const containerWidth = wrapper.clientWidth - 4;
+        const containerHeight = 350;
+
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const containerRatio = containerWidth / containerHeight;
+
+        let displayWidth, displayHeight;
+
+        if (imgRatio > containerRatio) {
+            displayWidth = containerWidth;
+            displayHeight = containerWidth / imgRatio;
+        } else {
+            displayHeight = containerHeight;
+            displayWidth = containerHeight * imgRatio;
+        }
+
+        // 设置canvas尺寸为原始图片尺寸（用于精确坐标）
+        regionMarkerCanvas.width = img.naturalWidth;
+        regionMarkerCanvas.height = img.naturalHeight;
+
+        // 设置canvas显示尺寸
+        regionMarkerCanvas.style.width = displayWidth + 'px';
+        regionMarkerCanvas.style.height = displayHeight + 'px';
+        regionMarkerCanvas.style.display = 'block';
+
+        // 设置图片显示尺寸
+        regionMarkerImage.style.width = displayWidth + 'px';
+        regionMarkerImage.style.height = displayHeight + 'px';
+
+        // 绑定事件
+        bindCanvasEvents();
+    }
+
+    // 绑定Canvas事件（支持触摸）
+    function bindCanvasEvents() {
+        const canvas = regionMarkerCanvas;
+
+        // 移除旧事件
+        canvas.onmousedown = null;
+        canvas.onmousemove = null;
+        canvas.onmouseup = null;
+        canvas.onmouseleave = null;
+        canvas.ontouchstart = null;
+        canvas.ontouchmove = null;
+        canvas.ontouchend = null;
+
+        // 获取坐标
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // 开始标记
+        function startMarking(e) {
+            e.preventDefault();
+            isMarking = true;
+            const coords = getCoords(e);
+            markStartX = coords.x;
+            markStartY = coords.y;
+        }
+
+        // 移动中
+        function moveMarking(e) {
+            if (!isMarking) return;
+            e.preventDefault();
+
+            const coords = getCoords(e);
+            const x = Math.min(markStartX, coords.x);
+            const y = Math.min(markStartY, coords.y);
+            const w = Math.abs(coords.x - markStartX);
+            const h = Math.abs(coords.y - markStartY);
+
+            currentRegion = { x, y, w, h };
+            drawRegion();
+            updateCoordsDisplay();
+        }
+
+    // 结束标记
+        function endMarking() {
+            if (!isMarking) return;
+            isMarking = false;
+
+            if (currentRegion && currentRegion.w > 5 && currentRegion.h > 5) {
+                // 有效选区
+            } else {
+                currentRegion = null;
+            }
+        }
+
+        // 鼠标事件
+        canvas.onmousedown = startMarking;
+        canvas.onmousemove = moveMarking;
+        canvas.onmouseup = endMarking;
+        canvas.onmouseleave = endMarking;
+
+        // 触摸事件
+        canvas.ontouchstart = startMarking;
+        canvas.ontouchmove = moveMarking;
+        canvas.ontouchend = endMarking;
+    }
+
+    // 绘制选区
+    function drawRegion() {
+        if (!currentRegion) return;
+
+        const ctx = regionMarkerCanvas.getContext('2d');
+        const { x, y, w, h } = currentRegion;
+
+        ctx.clearRect(0, 0, regionMarkerCanvas.width, regionMarkerCanvas.height);
+
+        // 半透明遮罩（选区外部变暗）
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, regionMarkerCanvas.width, regionMarkerCanvas.height);
+
+        // 清除选区内部
+        ctx.clearRect(x, y, w, h);
+
+        // 选区边框
+        ctx.strokeStyle = '#14B8A6';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([]);
+        ctx.strokeRect(x, y, w, h);
+
+        // 角标记
+        const cornerSize = Math.min(20, w / 4, h / 4);
+        ctx.fillStyle = '#14B8A6';
+
+        // 左上角
+        ctx.fillRect(x - 2, y - 2, cornerSize, 4);
+        ctx.fillRect(x - 2, y - 2, 4, cornerSize);
+
+        // 右上角
+        ctx.fillRect(x + w - cornerSize + 2, y - 2, cornerSize, 4);
+        ctx.fillRect(x + w - 2, y - 2, 4, cornerSize);
+
+        // 左下角
+        ctx.fillRect(x - 2, y + h - 2, cornerSize, 4);
+        ctx.fillRect(x - 2, y + h - cornerSize + 2, 4, cornerSize);
+
+        // 右下角
+        ctx.fillRect(x + w - cornerSize + 2, y + h - 2, cornerSize, 4);
+        ctx.fillRect(x + w - 2, y + h - cornerSize + 2, 4, cornerSize);
+
+        // 尺寸标签
+        ctx.fillStyle = '#14B8A6';
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        const label = `${Math.round(w)} × ${Math.round(h)}`;
+        const labelY = y > 30 ? y - 10 : y + h + 20;
+        ctx.fillText(label, x + w / 2, labelY);
+    }
+
+    // 清除Canvas
+    function clearCanvas() {
+        const ctx = regionMarkerCanvas.getContext('2d');
+        ctx.clearRect(0, 0, regionMarkerCanvas.width, regionMarkerCanvas.height);
+    }
+
+    // 更新坐标显示
+    function updateCoordsDisplay() {
+        const batchRegionX = document.getElementById('batchRegionX');
+        const batchRegionY = document.getElementById('batchRegionY');
+        const batchRegionW = document.getElementById('batchRegionW');
+        const batchRegionH = document.getElementById('batchRegionH');
+
+        if (currentRegion) {
+            batchRegionX.textContent = Math.round(currentRegion.x);
+            batchRegionY.textContent = Math.round(currentRegion.y);
+            batchRegionW.textContent = Math.round(currentRegion.w);
+            batchRegionH.textContent = Math.round(currentRegion.h);
+        } else {
+            batchRegionX.textContent = '0';
+            batchRegionY.textContent = '0';
+            batchRegionW.textContent = '0';
+            batchRegionH.textContent = '0';
+        }
+    }
+
+    // 更新进度显示
+    function updateRegionMarkerProgress() {
+        if (batchRegionMode === 'individual' && batchFiles.length > 0) {
+            regionMarkerProgress.textContent = `${batchCurrentImageIndex + 1} / ${batchFiles.length}`;
+            regionMarkerTitle.textContent = `标记第 ${batchCurrentImageIndex + 1} 张图片`;
+
+            prevImageBtn.disabled = batchCurrentImageIndex === 0;
+            nextImageBtn.disabled = batchCurrentImageIndex === batchFiles.length - 1;
+        }
+    }
+
+    // 清除选区按钮
+    clearRegionBtn.addEventListener('click', () => {
+        currentRegion = null;
+        clearCanvas();
+        updateCoordsDisplay();
+    });
+
+    // 确认选区按钮
+    confirmRegionBtn.addEventListener('click', () => {
+        if (!currentRegion) {
+            showAlert('请先在图片上框选水印区域');
+            return;
+        }
+
+        if (batchRegionMode === 'unified') {
+            unifiedRegion = { ...currentRegion };
+            showAlert('已设置统一水印区域，将应用到所有图片');
+        } else {
+            batchRegions[batchCurrentImageIndex] = { ...currentRegion };
+
+            // 自动跳转下一张
+            if (batchCurrentImageIndex < batchFiles.length - 1) {
+                batchCurrentImageIndex++;
+                loadImageForMarking(batchCurrentImageIndex);
+            } else {
+                showAlert('所有图片的水印区域已标记完成');
+            }
+        }
+    });
+
+    // 上一张按钮
+    prevImageBtn.addEventListener('click', () => {
+        if (batchCurrentImageIndex > 0) {
+            // 保存当前选区
+            if (currentRegion) {
+                batchRegions[batchCurrentImageIndex] = { ...currentRegion };
+            }
+            batchCurrentImageIndex--;
+            loadImageForMarking(batchCurrentImageIndex);
+        }
+    });
+
+    // 下一张按钮
+    nextImageBtn.addEventListener('click', () => {
+        if (batchCurrentImageIndex < batchFiles.length - 1) {
+            // 保存当前选区
+            if (currentRegion) {
+                batchRegions[batchCurrentImageIndex] = { ...currentRegion };
+            }
+            batchCurrentImageIndex++;
+            loadImageForMarking(batchCurrentImageIndex);
+        }
+    });
+
+    // 当批量文件变化时更新（重写addBatchFiles函数）
+    addBatchFiles = function(files) {
+        batchFiles = batchFiles.concat(files);
+        updateBatchPreview();
+        batchControls.style.display = 'block';
+
+        // 重置区域数据
+        batchRegions = batchFiles.map(() => null);
+        batchCurrentImageIndex = 0;
+        unifiedRegion = null;
+
+        // 如果当前是区域模式，初始化标记器
+        if (batchMethodSelect.value === 'region') {
+            initBatchRegionMarker();
+        }
+    };
+
     // 批量处理按钮
     batchProcessBtn.addEventListener('click', async () => {
         if (batchFiles.length === 0) {
@@ -835,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData();
 
-        batchFiles.forEach((file, index) => {
+        batchFiles.forEach((file) => {
             formData.append('images', file);
         });
 
@@ -881,6 +1280,36 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (method === 'color') {
                 formData.append('color_lower', document.getElementById('batchColorLower').value);
                 formData.append('color_upper', document.getElementById('batchColorUpper').value);
+            } else if (method === 'region') {
+                // 手动区域模式
+                if (batchRegionMode === 'unified') {
+                    if (!unifiedRegion) {
+                        showAlert('请先标记水印区域');
+                        loading.style.display = 'none';
+                        return;
+                    }
+                    formData.append('region_mode', 'unified');
+                    formData.append('region_x', Math.round(unifiedRegion.x));
+                    formData.append('region_y', Math.round(unifiedRegion.y));
+                    formData.append('region_w', Math.round(unifiedRegion.w));
+                    formData.append('region_h', Math.round(unifiedRegion.h));
+                } else {
+                    // 逐张标记模式
+                    const hasAllRegions = batchRegions.every(r => r !== null);
+                    if (!hasAllRegions) {
+                        const markedCount = batchRegions.filter(r => r !== null).length;
+                        showAlert(`还有 ${batchFiles.length - markedCount} 张图片未标记水印区域`);
+                        loading.style.display = 'none';
+                        return;
+                    }
+                    formData.append('region_mode', 'individual');
+                    formData.append('regions', JSON.stringify(batchRegions.map(r => ({
+                        x: Math.round(r.x),
+                        y: Math.round(r.y),
+                        w: Math.round(r.w),
+                        h: Math.round(r.h)
+                    }))));
+                }
             }
         }
 

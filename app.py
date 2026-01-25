@@ -148,6 +148,27 @@ def batch_remove_watermark():
                 if method == 'auto':
                     threshold = int(request.form.get('threshold', 200))
                     result_bytes = remove_watermark_auto(image_bytes, threshold=threshold)
+                elif method == 'region':
+                    # 手动区域模式
+                    region_mode = request.form.get('region_mode', 'unified')
+                    if region_mode == 'unified':
+                        x = int(request.form.get('region_x', 0))
+                        y = int(request.form.get('region_y', 0))
+                        w = int(request.form.get('region_w', 100))
+                        h = int(request.form.get('region_h', 50))
+                    else:
+                        # 逐张标记模式
+                        import json
+                        regions = json.loads(request.form.get('regions', '[]'))
+                        if i < len(regions):
+                            region = regions[i]
+                            x = region.get('x', 0)
+                            y = region.get('y', 0)
+                            w = region.get('w', 100)
+                            h = region.get('h', 50)
+                        else:
+                            x, y, w, h = 0, 0, 100, 50
+                    result_bytes = remove_watermark_region(image_bytes, x, y, w, h)
                 elif method == 'color':
                     color_lower = request.form.get('color_lower', '#c8c8c8')
                     color_upper = request.form.get('color_upper', '#ffffff')
