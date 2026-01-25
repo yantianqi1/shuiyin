@@ -7,7 +7,9 @@ from backend.watermark_remover import (
     remove_watermark_auto,
     remove_watermark_region,
     remove_watermark_color,
-    remove_watermark_frequency
+    remove_watermark_frequency,
+    add_text_watermark,
+    add_image_watermark
 )
 
 app = Flask(__name__)
@@ -73,6 +75,75 @@ def remove_watermark():
             mimetype='image/png',
             as_attachment=False,
             download_name='result.png'
+        )
+
+    except Exception as e:
+        return {'error': f'处理失败: {str(e)}'}, 500
+
+
+@app.route('/api/add-watermark', methods=['POST'])
+def add_watermark():
+    if 'image' not in request.files:
+        return {'error': '没有上传图片'}, 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return {'error': '没有选择文件'}, 400
+
+    watermark_type = request.form.get('type', 'text')
+    image_bytes = file.read()
+
+    # 通用参数
+    position = request.form.get('position', 'bottom-right')
+    opacity = float(request.form.get('opacity', 0.5))
+    margin = int(request.form.get('margin', 20))
+    custom_x = int(request.form.get('custom_x', 0))
+    custom_y = int(request.form.get('custom_y', 0))
+
+    try:
+        if watermark_type == 'text':
+            text = request.form.get('text', '')
+            if not text:
+                return {'error': '请输入水印文字'}, 400
+
+            font_size = int(request.form.get('font_size', 36))
+            font_color = request.form.get('font_color', '#FFFFFF')
+            rotation = float(request.form.get('rotation', 0))
+
+            result_bytes = add_text_watermark(
+                image_bytes, text,
+                font_size=font_size, font_color=font_color,
+                opacity=opacity, rotation=rotation,
+                position=position, margin=margin,
+                custom_x=custom_x, custom_y=custom_y
+            )
+
+        elif watermark_type == 'image':
+            if 'watermark_image' not in request.files:
+                return {'error': '请上传水印图片'}, 400
+
+            watermark_file = request.files['watermark_image']
+            if watermark_file.filename == '':
+                return {'error': '请选择水印图片'}, 400
+
+            watermark_bytes = watermark_file.read()
+            scale = float(request.form.get('scale', 0.2))
+
+            result_bytes = add_image_watermark(
+                image_bytes, watermark_bytes,
+                scale=scale, opacity=opacity,
+                position=position, margin=margin,
+                custom_x=custom_x, custom_y=custom_y
+            )
+
+        else:
+            return {'error': '未知的水印类型'}, 400
+
+        return send_file(
+            io.BytesIO(result_bytes),
+            mimetype='image/png',
+            as_attachment=False,
+            download_name='watermarked.png'
         )
 
     except Exception as e:

@@ -874,6 +874,246 @@ h1::before {
 }
 
 /* ============================================
+   水印功能样式
+   ============================================ */
+
+/* 水印类型标签页 */
+.watermark-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-sm);
+}
+
+.watermark-tab {
+    flex: 1;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.watermark-tab:hover {
+    background: rgba(255, 255, 255, 0.4);
+    color: var(--text-primary);
+}
+
+.watermark-tab.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+/* 水印面板 */
+.watermark-panel {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 16px;
+}
+
+/* 通用选项区域 */
+.watermark-common-options {
+    padding-top: 8px;
+}
+
+/* 表单组 */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group > label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* 表单行 - 多列布局 */
+.form-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 140px;
+}
+
+/* 文本输入框 */
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.form-group input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.form-group input[type="text"]::placeholder {
+    color: var(--text-muted);
+}
+
+/* 下拉选择框 */
+.form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%230D9488' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* 数字输入框 */
+.form-group input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    transition: all var(--transition-fast);
+}
+
+.form-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* 滑块样式 */
+.form-group input[type="range"] {
+    width: 100%;
+    height: 6px;
+    margin: 8px 0;
+    appearance: none;
+    background: rgba(13, 148, 136, 0.2);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
+    transition: transform var(--transition-fast);
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+/* 颜色选择器 */
+.form-group input[type="color"] {
+    width: 48px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+}
+
+/* 水印图片上传区域 */
+.watermark-upload-area {
+    background: rgba(255, 255, 255, 0.4);
+    border: 2px dashed var(--primary-light);
+    border-radius: var(--radius-sm);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.watermark-upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.watermark-upload-prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+}
+
+.watermark-upload-prompt svg {
+    width: 40px;
+    height: 40px;
+    color: var(--primary-light);
+}
+
+.watermark-upload-prompt span {
+    font-size: 0.9rem;
+}
+
+#watermarkPreview {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+/* 自定义坐标 */
+.custom-coords {
+    display: flex;
+    gap: 16px;
+}
+
+.custom-coords .form-group {
+    flex: 1;
+}
+
+.custom-coords label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ============================================
    Focus 状态（可访问性）
    ============================================ */
 

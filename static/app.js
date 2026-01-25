@@ -17,9 +17,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const autoOptions = document.getElementById('autoOptions');
     const regionOptions = document.getElementById('regionOptions');
     const colorOptions = document.getElementById('colorOptions');
+    const watermarkOptions = document.getElementById('watermarkOptions');
+
+    // 水印相关元素
+    const watermarkTabs = document.querySelectorAll('.watermark-tab');
+    const textWatermarkPanel = document.getElementById('textWatermarkPanel');
+    const imageWatermarkPanel = document.getElementById('imageWatermarkPanel');
+    const watermarkUploadArea = document.getElementById('watermarkUploadArea');
+    const watermarkImageInput = document.getElementById('watermarkImageInput');
+    const watermarkPreview = document.getElementById('watermarkPreview');
+    const watermarkPosition = document.getElementById('watermarkPosition');
+    const customCoords = document.getElementById('customCoords');
+
+    // 水印参数元素
+    const watermarkText = document.getElementById('watermarkText');
+    const fontSize = document.getElementById('fontSize');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    const fontColor = document.getElementById('fontColor');
+    const rotation = document.getElementById('rotation');
+    const rotationValue = document.getElementById('rotationValue');
+    const watermarkScale = document.getElementById('watermarkScale');
+    const scaleValue = document.getElementById('scaleValue');
+    const watermarkOpacity = document.getElementById('watermarkOpacity');
+    const opacityValue = document.getElementById('opacityValue');
+    const watermarkMargin = document.getElementById('watermarkMargin');
+    const marginValue = document.getElementById('marginValue');
+    const customX = document.getElementById('customX');
+    const customY = document.getElementById('customY');
 
     let currentFile = null;
     let resultBlob = null;
+    let watermarkFile = null;
+    let currentWatermarkType = 'text';
 
     // 区域选择相关
     let isDrawing = false;
@@ -199,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
         autoOptions.style.display = 'none';
         regionOptions.style.display = 'none';
         colorOptions.style.display = 'none';
+        watermarkOptions.style.display = 'none';
 
         // 显示对应选项
         switch (methodSelect.value) {
@@ -211,6 +241,9 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'color':
                 colorOptions.style.display = 'block';
                 break;
+            case 'add-watermark':
+                watermarkOptions.style.display = 'block';
+                break;
         }
 
         setupRegionSelection();
@@ -221,6 +254,75 @@ document.addEventListener('DOMContentLoaded', function() {
         thresholdValue.textContent = threshold.value;
     });
 
+    // ============================================
+    // 水印功能相关事件
+    // ============================================
+
+    // 水印类型标签页切换
+    watermarkTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            watermarkTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentWatermarkType = tab.dataset.type;
+
+            if (currentWatermarkType === 'text') {
+                textWatermarkPanel.style.display = 'block';
+                imageWatermarkPanel.style.display = 'none';
+            } else {
+                textWatermarkPanel.style.display = 'none';
+                imageWatermarkPanel.style.display = 'block';
+            }
+        });
+    });
+
+    // 水印图片上传
+    watermarkUploadArea.addEventListener('click', () => {
+        watermarkImageInput.click();
+    });
+
+    watermarkImageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            watermarkFile = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                watermarkPreview.src = e.target.result;
+                watermarkPreview.style.display = 'block';
+                watermarkUploadArea.querySelector('.watermark-upload-prompt').style.display = 'none';
+            };
+            reader.readAsDataURL(watermarkFile);
+        }
+    });
+
+    // 水印位置选择
+    watermarkPosition.addEventListener('change', () => {
+        if (watermarkPosition.value === 'custom') {
+            customCoords.style.display = 'flex';
+        } else {
+            customCoords.style.display = 'none';
+        }
+    });
+
+    // 水印参数滑块实时更新
+    fontSize.addEventListener('input', () => {
+        fontSizeValue.textContent = fontSize.value;
+    });
+
+    rotation.addEventListener('input', () => {
+        rotationValue.textContent = rotation.value + '°';
+    });
+
+    watermarkScale.addEventListener('input', () => {
+        scaleValue.textContent = watermarkScale.value + '%';
+    });
+
+    watermarkOpacity.addEventListener('input', () => {
+        opacityValue.textContent = watermarkOpacity.value + '%';
+    });
+
+    watermarkMargin.addEventListener('input', () => {
+        marginValue.textContent = watermarkMargin.value + 'px';
+    });
+
     // 处理按钮
     processBtn.addEventListener('click', async () => {
         if (!currentFile) return;
@@ -229,28 +331,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData();
         formData.append('image', currentFile);
-        formData.append('method', methodSelect.value);
 
-        switch (methodSelect.value) {
-            case 'auto':
-                formData.append('threshold', threshold.value);
-                break;
-            case 'region':
-                formData.append('x', regionX.value);
-                formData.append('y', regionY.value);
-                formData.append('width', regionW.value);
-                formData.append('height', regionH.value);
-                break;
-            case 'color':
-                const lowerColor = document.getElementById('colorLower').value;
-                const upperColor = document.getElementById('colorUpper').value;
-                formData.append('color_lower', lowerColor);
-                formData.append('color_upper', upperColor);
-                break;
+        // 判断是去水印还是添加水印
+        const isAddWatermark = methodSelect.value === 'add-watermark';
+        let apiUrl = '/api/remove-watermark';
+
+        if (isAddWatermark) {
+            apiUrl = '/api/add-watermark';
+            formData.append('type', currentWatermarkType);
+            formData.append('position', watermarkPosition.value);
+            formData.append('opacity', watermarkOpacity.value / 100);
+            formData.append('margin', watermarkMargin.value);
+
+            if (watermarkPosition.value === 'custom') {
+                formData.append('custom_x', customX.value);
+                formData.append('custom_y', customY.value);
+            }
+
+            if (currentWatermarkType === 'text') {
+                if (!watermarkText.value.trim()) {
+                    showAlert('请输入水印文字');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('text', watermarkText.value);
+                formData.append('font_size', fontSize.value);
+                formData.append('font_color', fontColor.value);
+                formData.append('rotation', rotation.value);
+            } else {
+                if (!watermarkFile) {
+                    showAlert('请上传水印图片');
+                    loading.style.display = 'none';
+                    return;
+                }
+                formData.append('watermark_image', watermarkFile);
+                formData.append('scale', watermarkScale.value / 100);
+            }
+        } else {
+            formData.append('method', methodSelect.value);
+
+            switch (methodSelect.value) {
+                case 'auto':
+                    formData.append('threshold', threshold.value);
+                    break;
+                case 'region':
+                    formData.append('x', regionX.value);
+                    formData.append('y', regionY.value);
+                    formData.append('width', regionW.value);
+                    formData.append('height', regionH.value);
+                    break;
+                case 'color':
+                    const lowerColor = document.getElementById('colorLower').value;
+                    const upperColor = document.getElementById('colorUpper').value;
+                    formData.append('color_lower', lowerColor);
+                    formData.append('color_upper', upperColor);
+                    break;
+            }
         }
 
         try {
-            const response = await fetch('/api/remove-watermark', {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 body: formData
             });
@@ -366,8 +506,18 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             currentFile = null;
             resultBlob = null;
+            watermarkFile = null;
             imageInput.value = '';
+            watermarkImageInput.value = '';
             previewSection.style.display = 'none';
+
+            // 重置水印预览
+            watermarkPreview.style.display = 'none';
+            watermarkPreview.src = '';
+            const watermarkPrompt = watermarkUploadArea.querySelector('.watermark-upload-prompt');
+            if (watermarkPrompt) {
+                watermarkPrompt.style.display = 'flex';
+            }
 
             uploadArea.parentElement.style.display = 'block';
             uploadArea.parentElement.style.opacity = '0';

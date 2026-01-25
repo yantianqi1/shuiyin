@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
+import os
 
 
 def remove_watermark_inpaint(image_bytes: bytes, mask_bytes: bytes) -> bytes:
@@ -166,3 +167,180 @@ def remove_watermark_frequency(image_bytes: bytes) -> bytes:
 
     _, buffer = cv2.imencode('.png', result)
     return buffer.tobytes()
+
+
+def hex_to_rgb(hex_color: str) -> tuple:
+    """将十六进制颜色转换为 RGB 元组"""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+
+def calculate_position(img_width: int, img_height: int,
+                       wm_width: int, wm_height: int,
+                       position: str, margin: int = 20,
+                       custom_x: int = 0, custom_y: int = 0) -> tuple:
+    """计算水印位置"""
+    if position == 'top-left':
+        return (margin, margin)
+    elif position == 'top-right':
+        return (img_width - wm_width - margin, margin)
+    elif position == 'bottom-left':
+        return (margin, img_height - wm_height - margin)
+    elif position == 'bottom-right':
+        return (img_width - wm_width - margin, img_height - wm_height - margin)
+    elif position == 'center':
+        return ((img_width - wm_width) // 2, (img_height - wm_height) // 2)
+    elif position == 'custom':
+        return (custom_x, custom_y)
+    else:
+        return (margin, margin)
+
+
+def add_text_watermark(image_bytes: bytes, text: str,
+                       font_size: int = 36, font_color: str = '#FFFFFF',
+                       opacity: float = 0.5, rotation: float = 0,
+                       position: str = 'bottom-right', margin: int = 20,
+                       custom_x: int = 0, custom_y: int = 0) -> bytes:
+    """
+    添加文字水印
+    """
+    # 打开原始图片
+    img = Image.open(io.BytesIO(image_bytes)).convert('RGBA')
+    img_width, img_height = img.size
+
+    # 创建透明图层用于绘制水印
+    txt_layer = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(txt_layer)
+
+    # 尝试加载中文字体
+    font = None
+    font_paths = [
+        '/System/Library/Fonts/PingFang.ttc',  # macOS
+        '/System/Library/Fonts/STHeiti Light.ttc',  # macOS
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',  # Linux
+        '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',  # Linux
+        'C:/Windows/Fonts/msyh.ttc',  # Windows
+        'C:/Windows/Fonts/simhei.ttf',  # Windows
+    ]
+
+    for font_path in font_paths:
+        if os.path.exists(font_path):
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+                break
+            except Exception:
+                continue
+
+    if font is None:
+        try:
+            font = ImageFont.truetype('arial.ttf', font_size)
+        except Exception:
+            font = ImageFont.load_default()
+
+    # 获取文字大小
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    # 转换颜色
+    rgb = hex_to_rgb(font_color)
+    alpha = int(255 * opacity)
+    color = (*rgb, alpha)
+
+    if position == 'tile':
+        # 平铺模式
+        spacing_x = text_width + 100
+        spacing_y = text_height + 80
+
+        for y in range(-img_height, img_height * 2, spacing_y):
+            for x in range(-img_width, img_width * 2, spacing_x):
+                # 创建临时图层用于旋转
+                temp_layer = Image.new('RGBA', (text_width + 40, text_height + 40), (255, 255, 255, 0))
+                temp_draw = ImageDraw.Draw(temp_layer)
+                temp_draw.text((20, 20), text, font=font, fill=color)
+
+                if rotation != 0:
+                    temp_layer = temp_layer.rotate(rotation, expand=True, resample=Image.BICUBIC)
+
+                # 粘贴到主图层
+                paste_x = x
+                paste_y = y
+                if 0 <= paste_x < img_width and 0 <= paste_y < img_height:
+                    txt_layer.paste(temp_layer, (paste_x, paste_y), temp_layer)
+    else:
+        # 单个水印
+        x, y = calculate_position(img_width, img_height, text_width, text_height,
+                                   position, margin, custom_x, custom_y)
+
+        if rotation != 0:
+            # 创建临时图层用于旋转
+            temp_layer = Image.new('RGBA', (text_width + 40, text_height + 40), (255, 255, 255, 0))
+            temp_draw = ImageDraw.Draw(temp_layer)
+            temp_draw.text((20, 20), text, font=font, fill=color)
+            temp_layer = temp_layer.rotate(rotation, expand=True, resample=Image.BICUBIC)
+
+            # 重新计算位置
+            new_width, new_height = temp_layer.size
+            x, y = calculate_position(img_width, img_height, new_width, new_height,
+                                       position, margin, custom_x, custom_y)
+            txt_layer.paste(temp_layer, (x, y), temp_layer)
+        else:
+            draw.text((x, y), text, font=font, fill=color)
+
+    # 合并图层
+    result = Image.alpha_composite(img, txt_layer)
+
+    # 转换为 RGB 并保存
+    result_rgb = result.convert('RGB')
+    output = io.BytesIO()
+    result_rgb.save(output, format='PNG')
+    return output.getvalue()
+
+
+def add_image_watermark(image_bytes: bytes, watermark_bytes: bytes,
+                        scale: float = 0.2, opacity: float = 0.5,
+                        position: str = 'bottom-right', margin: int = 20,
+                        custom_x: int = 0, custom_y: int = 0) -> bytes:
+    """
+    添加图片水印
+    """
+    # 打开原始图片和水印图片
+    img = Image.open(io.BytesIO(image_bytes)).convert('RGBA')
+    watermark = Image.open(io.BytesIO(watermark_bytes)).convert('RGBA')
+
+    img_width, img_height = img.size
+
+    # 缩放水印
+    wm_width = int(img_width * scale)
+    wm_height = int(watermark.height * (wm_width / watermark.width))
+    watermark = watermark.resize((wm_width, wm_height), Image.LANCZOS)
+
+    # 调整透明度
+    if opacity < 1.0:
+        # 获取 alpha 通道
+        r, g, b, a = watermark.split()
+        # 调整透明度
+        a = a.point(lambda x: int(x * opacity))
+        watermark = Image.merge('RGBA', (r, g, b, a))
+
+    if position == 'tile':
+        # 平铺模式
+        result = img.copy()
+        spacing_x = wm_width + 50
+        spacing_y = wm_height + 50
+
+        for y in range(0, img_height, spacing_y):
+            for x in range(0, img_width, spacing_x):
+                result.paste(watermark, (x, y), watermark)
+    else:
+        # 单个水印
+        x, y = calculate_position(img_width, img_height, wm_width, wm_height,
+                                   position, margin, custom_x, custom_y)
+        result = img.copy()
+        result.paste(watermark, (x, y), watermark)
+
+    # 转换为 RGB 并保存
+    result_rgb = result.convert('RGB')
+    output = io.BytesIO()
+    result_rgb.save(output, format='PNG')
+    return output.getvalue()
