@@ -90,6 +90,183 @@ document.addEventListener('DOMContentLoaded', function() {
     let batchWatermarkFile = null;
     let batchWatermarkType = 'text';
 
+    // ============================================
+    // 上传稳定性增强功能
+    // ============================================
+
+    // 配置常量
+    const UPLOAD_CONFIG = {
+        timeout: 120000,        // 120秒超时
+        maxRetries: 3,          // 最多重试3次
+        retryDelays: [1000, 2000, 4000],  // 指数退避: 1s, 2s, 4s
+        retryableStatusCodes: [500, 502, 503, 504]  // 可重试的服务器错误
+    };
+
+    /**
+     * 判断错误是否可重试
+     */
+    function isRetryableError(error, response) {
+        // 网络错误（如超时、连接失败）
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+            return true;
+        }
+        // 服务器错误（5xx）
+        if (response && UPLOAD_CONFIG.retryableStatusCodes.includes(response.status)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 带超时和重试的 fetch 请求
+     * @param {string} url - 请求URL
+     * @param {object} options - fetch 选项
+     * @returns {Promise<Response>}
+     */
+    async function fetchWithRetry(url, options = {}) {
+        const { timeout = UPLOAD_CONFIG.timeout, maxRetries = UPLOAD_CONFIG.maxRetries, ...fetchOptions } = options;
+
+        let lastError;
+        let lastResponse;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            try {
+                const response = await fetch(url, {
+                    ...fetchOptions,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // 如果成功或不可重试的错误，直接返回
+                if (response.ok || !isRetryableError(new Error('check'), response)) {
+                    return response;
+                }
+
+                // 记录错误并继续重试
+                lastResponse = response;
+                lastError = new Error(`服务器错误: ${response.status} ${response.statusText}`);
+
+            } catch (error) {
+                clearTimeout(timeoutId);
+                lastError = error;
+
+                // 如果是超时错误，生成更有意义的错误信息
+                if (error.name === 'AbortError') {
+                    if (attempt < maxRetries) {
+                        lastError = new Error(`请求超时 (${timeout / 1000}秒)，正在重试...`);
+                    } else {
+                        lastError = new Error(`请求超时 (${timeout / 1000}秒)，请检查网络连接`);
+                    }
+                } else if (error.name === 'TypeError' && error.message === 'fetch failed') {
+                    if (attempt < maxRetries) {
+                        lastError = new Error('网络连接失败，正在重试...');
+                    } else {
+                        lastError = new Error('网络连接失败，请检查网络');
+                    }
+                }
+            }
+
+            // 如果还有重试次数，等待后重试
+            if (attempt < maxRetries) {
+                const delay = UPLOAD_CONFIG.retryDelays[attempt] || UPLOAD_CONFIG.retryDelays[UPLOAD_CONFIG.retryDelays.length - 1];
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        throw lastError;
+    }
+
+    /**
+     * 带进度显示的上传函数 (使用 XMLHttpRequest)
+     * @param {string} url - 请求URL
+     * @param {FormData} formData - 表单数据
+     * @param {function} onProgress - 进度回调 (0-100)
+     * @returns {Promise<Response>}
+     */
+    function uploadWithProgress(url, formData, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+
+            // 超时处理
+            xhr.timeout = UPLOAD_CONFIG.timeout;
+            xhr.ontimeout = () => {
+                reject(new Error(`请求超时 (${UPLOAD_CONFIG.timeout / 1000}秒)，请检查网络连接`));
+            };
+
+            // 进度事件
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && onProgress) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    onProgress(percent, e.loaded, e.total);
+                }
+            };
+
+            // 请求完成
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(xhr);
+                } else {
+                    reject(new Error(`服务器错误: ${xhr.status} ${xhr.statusText}`));
+                }
+            };
+
+            // 请求错误
+            xhr.onerror = () => {
+                reject(new Error('网络连接失败，请检查网络'));
+            };
+
+            xhr.open('POST', url);
+            xhr.send(formData);
+        });
+    }
+
+    /**
+     * 带进度显示和重试的上传
+     * @param {string} url - 请求URL
+     * @param {FormData} formData - 表单数据
+     * @param {function} onProgress - 进度回调 (0-100)
+     * @returns {Promise<Blob>}
+     */
+    async function uploadWithRetryAndProgress(url, formData, onProgress) {
+        let lastError;
+
+        for (let attempt = 0; attempt <= UPLOAD_CONFIG.maxRetries; attempt++) {
+            try {
+                const xhr = await uploadWithProgress(url, formData, onProgress);
+                return xhr.response;
+            } catch (error) {
+                lastError = error;
+
+                // 判断是否可重试
+                const isRetryable = isRetryableError(error, null);
+
+                // 如果网络错误或超时，且还有重试次数
+                if (isRetryable && attempt < UPLOAD_CONFIG.maxRetries) {
+                    const retryMessage = error.name === 'AbortError' || error.message.includes('超时')
+                        ? `正在重试 (${attempt + 1}/${UPLOAD_CONFIG.maxRetries})...`
+                        : `网络不稳定，正在重试 (${attempt + 1}/${UPLOAD_CONFIG.maxRetries})...`;
+
+                    // 更新进度显示重试信息
+                    if (onProgress) {
+                        onProgress(-1, 0, 0, retryMessage);
+                    }
+
+                    const delay = UPLOAD_CONFIG.retryDelays[attempt] || UPLOAD_CONFIG.retryDelays[UPLOAD_CONFIG.retryDelays.length - 1];
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    // 不可重试或已达最大重试次数
+                    break;
+                }
+            }
+        }
+
+        throw lastError;
+    }
+
     // 新水印类型面板引用
     const qrcodeWatermarkPanel = document.getElementById('qrcodeWatermarkPanel');
     const datetimeWatermarkPanel = document.getElementById('datetimeWatermarkPanel');
@@ -754,16 +931,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                body: formData
-            });
+            // 进度回调函数
+            const updateProgress = (percent, loaded, total, message) => {
+                if (message) {
+                    loadingText.textContent = message;
+                } else if (percent >= 0) {
+                    // 格式化文件大小
+                    const formatSize = (bytes) => {
+                        if (bytes < 1024) return bytes + ' B';
+                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                    };
+                    loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})`;
+                }
+            };
 
-            if (!response.ok) {
-                throw new Error('处理失败');
-            }
+            // 使用带进度和重试的上传
+            resultBlob = await uploadWithRetryAndProgress(apiUrl, formData, updateProgress);
 
-            resultBlob = await response.blob();
             const url = URL.createObjectURL(resultBlob);
             resultImage.src = url;
             resultImage.style.display = 'block';
@@ -1466,16 +1651,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                body: formData
-            });
+            // 进度回调函数
+            const updateProgress = (percent, loaded, total, message) => {
+                if (message) {
+                    loadingText.textContent = message;
+                } else if (percent >= 0) {
+                    // 格式化文件大小
+                    const formatSize = (bytes) => {
+                        if (bytes < 1024) return bytes + ' B';
+                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                    };
+                    loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)}) - 共 ${batchFiles.length} 张图片`;
+                }
+            };
 
-            if (!response.ok) {
-                throw new Error('处理失败');
-            }
+            // 使用带进度和重试的上传
+            const blob = await uploadWithRetryAndProgress(apiUrl, formData, updateProgress);
 
-            const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1485,7 +1678,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            showAlert(`���功处理 ${batchFiles.length} 张图片！`);
+            showAlert(`成功处理 ${batchFiles.length} 张图片！`);
 
         } catch (error) {
             showAlert('处理失败：' + error.message);
