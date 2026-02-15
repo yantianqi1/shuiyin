@@ -200,16 +200,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 reject(new Error(`请求超时 (${UPLOAD_CONFIG.timeout / 1000}秒)，请检查网络连接`));
             };
 
-            // 进度事件
+            let downloadComplete = false;
+
+            // 上传进度事件
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable && onProgress) {
                     const percent = Math.round((e.loaded / e.total) * 100);
-                    onProgress(percent, e.loaded, e.total);
+                    onProgress(percent, e.loaded, e.total, 'upload');
+                }
+            };
+
+            // 下载进度事件
+            xhr.onprogress = (e) => {
+                if (e.lengthComputable && onProgress && !downloadComplete) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    onProgress(percent, e.loaded, e.total, 'download');
                 }
             };
 
             // 请求完成
             xhr.onload = () => {
+                downloadComplete = true;
                 if (xhr.status >= 200 && xhr.status < 300) {
                     // 返回整个 xhr 对象，以便访问 response
                     resolve(xhr);
@@ -256,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // 更新进度显示重试信息
                     if (onProgress) {
-                        onProgress(-1, 0, 0, retryMessage);
+                        onProgress(-1, 0, 0, 'retry', retryMessage);
                     }
 
                     const delay = UPLOAD_CONFIG.retryDelays[attempt] || UPLOAD_CONFIG.retryDelays[UPLOAD_CONFIG.retryDelays.length - 1];
@@ -936,16 +947,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // 进度回调函数
-            const updateProgress = (percent, loaded, total, message) => {
+            const updateProgress = (percent, loaded, total, phase, message) => {
+                // 格式化文件大小
+                const formatSize = (bytes) => {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                };
+
+                // 重试消息优先显示
                 if (message) {
                     loadingText.textContent = message;
-                } else if (percent >= 0) {
-                    // 格式化文件大小
-                    const formatSize = (bytes) => {
-                        if (bytes < 1024) return bytes + ' B';
-                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-                    };
+                } else if (phase === 'upload') {
+                    if (percent < 100) {
+                        loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})`;
+                    } else {
+                        loadingText.textContent = '上传完成，正在处理图片...';
+                    }
+                } else if (phase === 'download') {
+                    loadingText.textContent = `下载中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})`;
+                } else if (typeof percent === 'number' && percent >= 0) {
+                    // 兼容旧的调用方式
                     loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})`;
                 }
             };
@@ -1661,17 +1683,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // 进度回调函数
-            const updateProgress = (percent, loaded, total, message) => {
+            const updateProgress = (percent, loaded, total, phase, message) => {
+                // 格式化文件大小
+                const formatSize = (bytes) => {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                };
+
+                const batchInfo = ` - 共 ${batchFiles.length} 张图片`;
+
+                // 重试消息优先显示
                 if (message) {
                     loadingText.textContent = message;
-                } else if (percent >= 0) {
-                    // 格式化文件大小
-                    const formatSize = (bytes) => {
-                        if (bytes < 1024) return bytes + ' B';
-                        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-                    };
-                    loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)}) - 共 ${batchFiles.length} 张图片`;
+                } else if (phase === 'upload') {
+                    if (percent < 100) {
+                        loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})${batchInfo}`;
+                    } else {
+                        loadingText.textContent = `上传完成，正在处理图片...${batchInfo}`;
+                    }
+                } else if (phase === 'download') {
+                    loadingText.textContent = `下载中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})${batchInfo}`;
+                } else if (typeof percent === 'number' && percent >= 0) {
+                    // 兼容旧的调用方式
+                    loadingText.textContent = `上传中 ${percent}% (${formatSize(loaded)} / ${formatSize(total)})${batchInfo}`;
                 }
             };
 
