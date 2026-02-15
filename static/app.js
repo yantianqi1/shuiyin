@@ -191,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
 
+            // 设置响应类型为 blob
+            xhr.responseType = 'blob';
+
             // 超时处理
             xhr.timeout = UPLOAD_CONFIG.timeout;
             xhr.ontimeout = () => {
@@ -208,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // 请求完成
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
+                    // 返回整个 xhr 对象，以便访问 response
                     resolve(xhr);
                 } else {
                     reject(new Error(`服务器错误: ${xhr.status} ${xhr.statusText}`));
@@ -949,6 +953,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // 使用带进度和重试的上传
             resultBlob = await uploadWithRetryAndProgress(apiUrl, formData, updateProgress);
 
+            // 验证返回的数据
+            if (!resultBlob || resultBlob.size === 0) {
+                throw new Error('服务器返回了空数据，请稍后重试');
+            }
+
             const url = URL.createObjectURL(resultBlob);
             resultImage.src = url;
             resultImage.style.display = 'block';
@@ -1668,6 +1677,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // 使用带进度和重试的上传
             const blob = await uploadWithRetryAndProgress(apiUrl, formData, updateProgress);
+
+            // 验证返回的数据
+            if (!blob || blob.size === 0) {
+                throw new Error('服务器返回了空数据，请稍后重试');
+            }
 
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
