@@ -151,7 +151,14 @@
                         </svg>
                         去水印方式
                     </label>
-                    <select id="methodSelect">
+                    <div class="method-buttons" id="methodButtons">
+                        <button type="button" class="method-btn active" data-value="auto">自动检测</button>
+                        <button type="button" class="method-btn" data-value="region">手动区域</button>
+                        <button type="button" class="method-btn" data-value="color">按颜色</button>
+                        <button type="button" class="method-btn" data-value="frequency">频域滤波</button>
+                        <button type="button" class="method-btn" data-value="add-watermark">加水印</button>
+                    </div>
+                    <select id="methodSelect" style="display: none;">
                         <option value="auto">自动检测（浅色水印）</option>
                         <option value="region">手动选择区域</option>
                         <option value="color">按颜色去除</option>
@@ -234,6 +241,25 @@
                             <span class="color-label">上限</span>
                             <input type="color" id="colorUpper" value="#ffffff">
                         </label>
+                    </div>
+                </div>
+
+                <!-- 频域滤波选项 -->
+                <div class="method-options" id="frequencyOptions" style="display: none;">
+                    <div class="option-header">
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12h2m4-4H6m12 0h-2m4 4h2M2 4v2m0 12v2M22 4v2m0 12v2"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        频域滤波
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 12px;">
+                        适用于去除平铺/重复的水印图案。使用傅里叶变换在频域中识别并移除水印成分。
+                    </p>
+                    <div class="form-group">
+                        <label>滤波强度</label>
+                        <input type="range" id="frequencyStrength" min="1" max="10" value="5">
+                        <span class="range-value" id="frequencyStrengthValue">5</span>
                     </div>
                 </div>
 
@@ -511,7 +537,14 @@
                         </svg>
                         处理方式
                     </label>
-                    <select id="batchMethodSelect">
+                    <div class="method-buttons" id="batchMethodButtons">
+                        <button type="button" class="method-btn active" data-value="auto">自动去水印</button>
+                        <button type="button" class="method-btn" data-value="region">手动标记</button>
+                        <button type="button" class="method-btn" data-value="color">按颜色</button>
+                        <button type="button" class="method-btn" data-value="frequency">频域滤波</button>
+                        <button type="button" class="method-btn" data-value="add-watermark">加水印</button>
+                    </div>
+                    <select id="batchMethodSelect" style="display: none;">
                         <option value="auto">自动去水印（亮度检测）</option>
                         <option value="region">手动标记区域</option>
                         <option value="color">按颜色去除</option>
@@ -627,6 +660,25 @@
                     <div class="color-inputs">
                         <label><span class="color-label">下限</span><input type="color" id="batchColorLower" value="#c8c8c8"></label>
                         <label><span class="color-label">上限</span><input type="color" id="batchColorUpper" value="#ffffff"></label>
+                    </div>
+                </div>
+
+                <!-- 批量频域滤波选项 -->
+                <div class="method-options" id="batchFrequencyOptions" style="display: none;">
+                    <div class="option-header">
+                        <svg class="option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M2 12h2m4-4H6m12 0h-2m4 4h2M2 4v2m0 12v2M22 4v2m0 12v2"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        频域滤波
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 12px;">
+                        适用于去除平铺/重复的水印图案。
+                    </p>
+                    <div class="form-group">
+                        <label>滤波强度</label>
+                        <input type="range" id="batchFrequencyStrength" min="1" max="10" value="5">
+                        <span class="range-value" id="batchFrequencyStrengthValue">5</span>
                     </div>
                 </div>
 

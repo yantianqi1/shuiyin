@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const regionOptions = document.getElementById('regionOptions');
     const colorOptions = document.getElementById('colorOptions');
     const watermarkOptions = document.getElementById('watermarkOptions');
+    const frequencyOptions = document.getElementById('frequencyOptions');
 
     // 水印相关元素
     const watermarkTabs = document.querySelectorAll('#watermarkOptions .watermark-tab');
@@ -626,6 +627,9 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'color':
                 colorOptions.style.display = 'block';
                 break;
+            case 'frequency':
+                frequencyOptions.style.display = 'block';
+                break;
             case 'add-watermark':
                 watermarkOptions.style.display = 'block';
                 break;
@@ -634,9 +638,37 @@ document.addEventListener('DOMContentLoaded', function() {
         setupRegionSelection();
     });
 
+    // 方法按钮点击事件
+    const methodButtons = document.getElementById('methodButtons');
+    if (methodButtons) {
+        methodButtons.addEventListener('click', (e) => {
+            const btn = e.target.closest('.method-btn');
+            if (!btn) return;
+
+            // 更新按钮状态
+            methodButtons.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 更新 select 值
+            methodSelect.value = btn.dataset.value;
+
+            // 触发原有逻辑
+            methodSelect.dispatchEvent(new Event('change'));
+        });
+    }
+
     threshold.addEventListener('input', () => {
         thresholdValue.textContent = threshold.value;
     });
+
+    // 频域滤波强度滑块
+    const frequencyStrength = document.getElementById('frequencyStrength');
+    const frequencyStrengthValue = document.getElementById('frequencyStrengthValue');
+    if (frequencyStrength) {
+        frequencyStrength.addEventListener('input', () => {
+            frequencyStrengthValue.textContent = frequencyStrength.value;
+        });
+    }
 
     // ============================================
     // 水印功能相关事件
@@ -942,6 +974,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     formData.append('color_lower', lowerColor);
                     formData.append('color_upper', upperColor);
                     break;
+                case 'frequency':
+                    formData.append('strength', frequencyStrength.value);
+                    break;
             }
         }
 
@@ -1008,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const batchColorOptions = document.getElementById('batchColorOptions');
     const batchWatermarkOptions = document.getElementById('batchWatermarkOptions');
     const batchRegionOptions = document.getElementById('batchRegionOptions');
+    const batchFrequencyOptions = document.getElementById('batchFrequencyOptions');
     const batchThreshold = document.getElementById('batchThreshold');
     const batchThresholdValue = document.getElementById('batchThresholdValue');
 
@@ -1016,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
         batchColorOptions.style.display = 'none';
         batchWatermarkOptions.style.display = 'none';
         batchRegionOptions.style.display = 'none';
+        if (batchFrequencyOptions) batchFrequencyOptions.style.display = 'none';
 
         switch (batchMethodSelect.value) {
             case 'auto':
@@ -1028,15 +1065,46 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'color':
                 batchColorOptions.style.display = 'block';
                 break;
+            case 'frequency':
+                if (batchFrequencyOptions) batchFrequencyOptions.style.display = 'block';
+                break;
             case 'add-watermark':
                 batchWatermarkOptions.style.display = 'block';
                 break;
         }
     });
 
+    // 批量方法按钮点击事件
+    const batchMethodButtons = document.getElementById('batchMethodButtons');
+    if (batchMethodButtons) {
+        batchMethodButtons.addEventListener('click', (e) => {
+            const btn = e.target.closest('.method-btn');
+            if (!btn) return;
+
+            // 更新按钮状态
+            batchMethodButtons.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 更新 select 值
+            batchMethodSelect.value = btn.dataset.value;
+
+            // 触发原有逻辑
+            batchMethodSelect.dispatchEvent(new Event('change'));
+        });
+    }
+
     batchThreshold.addEventListener('input', () => {
         batchThresholdValue.textContent = batchThreshold.value;
     });
+
+    // 批量频域滤波强度滑块
+    const batchFrequencyStrength = document.getElementById('batchFrequencyStrength');
+    const batchFrequencyStrengthValue = document.getElementById('batchFrequencyStrengthValue');
+    if (batchFrequencyStrength) {
+        batchFrequencyStrength.addEventListener('input', () => {
+            batchFrequencyStrengthValue.textContent = batchFrequencyStrength.value;
+        });
+    }
 
     batchOutputQuality.addEventListener('input', () => {
         batchQualityValue.textContent = batchOutputQuality.value + '%';
@@ -1648,6 +1716,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (method === 'color') {
                 formData.append('color_lower', document.getElementById('batchColorLower').value);
                 formData.append('color_upper', document.getElementById('batchColorUpper').value);
+            } else if (method === 'frequency') {
+                formData.append('strength', batchFrequencyStrength.value);
             } else if (method === 'region') {
                 // 手动区域模式
                 if (batchRegionMode === 'unified') {

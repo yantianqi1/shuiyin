@@ -515,6 +515,63 @@ h1::before {
     box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
+/* 方法按钮组 */
+.method-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.method-btn {
+    flex: 1;
+    min-width: calc(20% - 8px);
+    max-width: calc(20% - 8px);
+    padding: 12px 8px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--glass-bg-hover);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.method-btn:hover {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    background: rgba(13, 148, 136, 0.08);
+}
+
+.method-btn.active {
+    color: white;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+/* 小屏幕适配 */
+@media (max-width: 768px) {
+    .method-btn {
+        min-width: calc(33.33% - 8px);
+        max-width: calc(33.33% - 8px);
+        padding: 10px 6px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .method-btn {
+        min-width: calc(50% - 8px);
+        max-width: calc(50% - 8px);
+    }
+}
+
 /* 方法选项面板 */
 .method-options {
     margin-bottom: 20px;
